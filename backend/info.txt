@@ -1,0 +1,1 @@
+ MONGODB_URI="mongodb+srv://ksujanagupta:YAeRVYHU0mrBBnse@cluster0.rsf4s.mongodb.net/"
