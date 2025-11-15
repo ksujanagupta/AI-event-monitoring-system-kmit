@@ -37,6 +37,7 @@ connectDB();
 
 // Ensure uploads directory exists - this is now handled in auth.js before multer uses it
 const UPLOADS_DIR = path.join(__dirname, 'uploads'); // Define it here for static serving
+// const VIDEOS_DIR = path.join(__dirname, 'videos'); // Define it here for static serving
 // if (!fs.existsSync(UPLOADS_DIR)) {
 //   fs.mkdirSync(UPLOADS_DIR);
 // }
