@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShieldCheckIcon, UserIcon, LockIcon, MailIcon, UploadIcon } from 'lucide-react';
 import { motion } from 'framer-motion';
+declare const faceapi: any;
+
 export function SignUp() {
   const navigate = useNavigate();
   const [role, setRole] = useState<'admin' | 'volunteer' | 'attendee'>('attendee');
@@ -28,38 +30,70 @@ export function SignUp() {
     }
   };
   const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (formData.password !== formData.confirmPassword) {
-      alert('Passwords do not match');
+  e.preventDefault();
+
+  if (formData.password !== formData.confirmPassword) {
+    alert("Passwords do not match");
+    return;
+  }
+
+  let descriptor: number[] | null = null;
+
+  if (role === "volunteer") {
+    if (!formData.image) {
+      alert("Please upload a profile photo.");
       return;
     }
-    try {
-      const formDataToSend = new FormData();
-      formDataToSend.append('name', formData.name);
-      formDataToSend.append('email', formData.email);
-      formDataToSend.append('password', formData.password);
-      formDataToSend.append('role', role);
-      if (formData.image) {
-        formDataToSend.append('image', formData.image);
-      }
 
-      const response = await fetch('http://localhost:5000/api/signup', {
-        method: 'POST',
-        body: formDataToSend,
-      });
-      const data = await response.json();
-      if (response.ok) {
-        console.log('Sign up successful:', data);
-        alert('Account created successfully! Please log in.');
-        navigate('/login');
-      } else {
-        alert(data.msg || 'Sign up failed');
-      }
-    } catch (error) {
-      console.error('Sign up error:', error);
-      alert('Server error during sign up');
+    descriptor = await generateDescriptor(formData.image);
+
+    if (!descriptor) {
+      alert("Face not detected in image. Upload a clear face photo.");
+      return;
     }
-  };
+  }
+
+  const formDataToSend = new FormData();
+  formDataToSend.append("name", formData.name);
+  formDataToSend.append("email", formData.email);
+  formDataToSend.append("password", formData.password);
+  formDataToSend.append("role", role);
+  formDataToSend.append("descriptor", JSON.stringify(descriptor));
+
+  if (formData.image) {
+    formDataToSend.append("image", formData.image);
+  }
+
+  const response = await fetch("http://localhost:5000/api/signup", {
+    method: "POST",
+    body: formDataToSend,
+  });
+
+  const data = await response.json();
+
+  if (response.ok) {
+    alert("Account created successfully! Please log in.");
+    navigate("/login");
+  } else {
+    alert(data.msg || "Sign up failed");
+  }
+};
+
+  const generateDescriptor = async (imageFile: File) => {
+  await faceapi.nets.ssdMobilenetv1.loadFromUri("/public/models");
+  await faceapi.nets.faceLandmark68Net.loadFromUri("/public/models");
+  await faceapi.nets.faceRecognitionNet.loadFromUri("/public/models");
+
+  const img = await faceapi.bufferToImage(imageFile);
+  const detection = await faceapi
+    .detectSingleFace(img)
+    .withFaceLandmarks()
+    .withFaceDescriptor();
+
+  if (!detection) return null;
+  return Array.from(detection.descriptor);
+};
+
   return <div className="min-h-screen w-full relative flex items-center justify-center p-6">
       {/* Fixed Background */}
       <div className="fixed inset-0 bg-cover bg-center bg-no-repeat" style={{
