@@ -8,6 +8,7 @@ const path = require('path');
 const fs = require('fs');
 const http = require('http');
 const { Server } = require('socket.io');
+const objectSearchMultiRoute = require("./routes/objectSearchMulti");
 
 dotenv.config(); // Load environment variables from .env file
 
@@ -25,6 +26,11 @@ const connectDB = require('./config/db'); // Import DB connection
 const User = require('./models/User'); // Import User model
 const Issue = require('./models/Issue'); // Import Issue model
 const authRoutes = require('./routes/auth'); // Import auth routes
+app.use(express.json({ limit: '1mb' })); // parse JSON
+app.use("/api", objectSearchMultiRoute);
+
+const faceSearchRoutes = require("./routes/persondetection.js"); 
+app.use("/api", faceSearchRoutes);
 
 // Connect to database
 connectDB();
@@ -51,7 +57,8 @@ const UPLOADS_DIR = path.join(__dirname, 'uploads'); // Define it here for stati
 app.use(cors());
 app.use(express.json());
 app.use('/uploads', express.static(UPLOADS_DIR)); // Serve static files from uploads directory
-
+const objectSearchRoute = require("./routes/objectSearch");
+app.use("/api", objectSearchRoute);
 // Use Auth Routes
 app.use('/api', authRoutes); // All auth routes will be prefixed with /api
 
@@ -63,6 +70,9 @@ app.use('/api', adminRoutes); // All admin routes will be prefixed with /api
 
 const volunteerRoutes = require('./routes/volunteer'); // Import volunteer routes
 app.use('/api', volunteerRoutes); // All volunteer routes will be prefixed with /api
+
+app.use('/api', require('./routes/faceLogin'));
+app.use('/api', require('./routes/volunteerRegister'));
 
 // Make io available to our routers
 app.set('io', io);
