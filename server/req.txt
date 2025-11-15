@@ -1,0 +1,8 @@
+pip install ultralytics opencv-python deep-sort-realtime numpy
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+pip install pillow
+pip install scipy
+pip install protobuf
+pip install git+https://github.com/openai/CLIP.git
+
+

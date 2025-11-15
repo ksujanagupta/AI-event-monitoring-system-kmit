@@ -1,47 +1,103 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { VideoIcon, MaximizeIcon, AlertTriangleIcon, XIcon, ArrowLeftIcon } from 'lucide-react';
+import { AlertTriangleIcon, XIcon } from 'lucide-react';
+
+type CameraConfig = {
+  id: number;
+  name: string;
+  type: string;
+  alert: boolean;
+  videoUrl?: string;
+  liveStream?: boolean;
+  streamUrl?: string;
+};
+
+const STREAM_ENDPOINT =
+  import.meta.env.VITE_LIVE_STREAM_URL || 'http://127.0.0.1:5001/stream';
+
 export function AdminSurveillance() {
   const navigate = useNavigate();
   const [selectedCameras, setSelectedCameras] = useState<number[]>([]);
-  const cameras = [{
-    id: 0,
-    name: 'Main Stage',
-    type: 'Primary',
-    alert: false,
-    imageId: 1492684223066
-  }, {
-    id: 1,
-    name: 'Violence Detection',
-    type: 'AI Monitor',
-    alert: true,
-    imageId: 1492684223067
-  }, {
-    id: 2,
-    name: 'Fire & Smoke',
-    type: 'AI Monitor',
-    alert: false,
-    imageId: 1492684223068
-  }, {
-    id: 3,
-    name: 'Crowd Surge',
-    type: 'AI Monitor',
-    alert: true,
-    imageId: 1492684223069
-  }, {
-    id: 4,
-    name: 'North Entrance',
-    type: 'Standard',
-    alert: false,
-    imageId: 1492684223070
-  }, {
-    id: 5,
-    name: 'Parking Area',
-    type: 'Standard',
-    alert: false,
-    imageId: 1492684223071
-  }];
+  
+  console.warn('⚠️ ADMIN SURVEILLANCE COMPONENT MOUNTED');
+  
+  const cameras: CameraConfig[] = [{
+      id: 0,
+      name: 'Main Stage',
+      type: 'Primary',
+      alert: false,
+      videoUrl: '/videos/sujana_fire.mp4'
+    }, {
+      id: 1,
+      name: 'AI Fire Detection',
+      type: 'Live Stream',
+      alert: false,
+      liveStream: true,
+      streamUrl: STREAM_ENDPOINT
+    }, {
+      id: 2,
+      name: 'AI Violence Detection',
+      type: 'Live Stream',
+      alert: false,
+      liveStream: true,
+      streamUrl: STREAM_ENDPOINT
+    }, {
+      id: 3,
+      name: 'Crowd Surge',
+      type: 'AI Monitor',
+      alert: true,
+      videoUrl: '/videos/sujana_fire.mp4'
+    }, {
+      id: 4,
+      name: 'North Entrance',
+      type: 'Standard',
+      alert: false,
+      videoUrl: '/videos/sujana_fire.mp4'
+    }, {
+      id: 5,
+      name: 'Parking Area',
+      type: 'Standard',
+      alert: false,
+      videoUrl: '/videos/sujana_fire.mp4'
+    }];
+
+  const renderLiveStream = (camera: CameraConfig, className?: string) => (
+    <img
+      src={`${camera.streamUrl}?cacheBust=${Date.now()}`}
+      alt={`${camera.name} live feed`}
+      className={`w-full h-full object-cover ${className ?? ''}`}
+      onError={(e) => {
+        console.error('❌ Stream error:', camera.streamUrl);
+        const target = e.currentTarget;
+        target.style.opacity = '0.3';
+      }}
+    />
+  );
+
+  const renderRecordedVideo = (camera: CameraConfig, className?: string) => (
+    <video 
+      className={`w-full h-full object-cover ${className ?? ''}`}
+      autoPlay 
+      loop 
+      muted 
+      playsInline 
+      controls
+      onError={(e: any) => {
+        console.error('❌ Video error:', camera.videoUrl, e.target.error);
+      }}
+      onLoadedData={() => {
+        console.warn('✅ Video loaded:', camera.videoUrl);
+      }}
+      onCanPlay={() => {
+        console.warn('▶️ Video can play:', camera.videoUrl);
+      }}
+    >
+      <source src={`${camera.videoUrl}`} type="video/mp4" />
+      Your browser does not support the video tag.
+    </video>
+  );
   const handleCameraClick = (cameraId: number) => {
+    
     if (selectedCameras.includes(cameraId)) {
       setSelectedCameras(selectedCameras.filter(id => id !== cameraId));
     } else if (selectedCameras.length < 2) {
@@ -62,9 +118,12 @@ export function AdminSurveillance() {
       </div>
       {/* Camera Grid Layout */}
       <div className="grid grid-cols-3 gap-4">
-        {cameras.map((camera, index) => <button key={camera.id} onClick={() => handleCameraClick(camera.id)} className={`relative bg-slate-900 border rounded-xl overflow-hidden transition-all w-full ${selectedCameras.includes(camera.id) ? 'border-blue-500 ring-2 ring-blue-500' : 'border-slate-800 hover:border-blue-500'}`}>
-            <div className="aspect-video bg-slate-950 relative">
-              <img src={`https://images.unsplash.com/photo-${camera.imageId}?w=600&h=338&fit=crop`} alt={camera.name} className="w-full h-full object-cover" />
+        {cameras.map((camera, index) => {
+          console.warn(`📹 Rendering camera ${index}:`, camera.videoUrl);
+          return <button key={camera.id} onClick={() => handleCameraClick(camera.id)} className={`relative bg-slate-900 border rounded-xl overflow-hidden transition-all w-full ${selectedCameras.includes(camera.id) ? 'border-blue-500 ring-2 ring-blue-500' : 'border-slate-800 hover:border-blue-500'}`}>
+            <div className="aspect-video bg-slate-950 relative overflow-hidden">
+              
+              {camera.liveStream ? renderLiveStream(camera) : renderRecordedVideo(camera)}
               {camera.alert && <div className="absolute top-2 right-2 w-3 h-3 bg-red-500 rounded-full animate-pulse" />}
               <div className="absolute top-2 left-2 bg-black/70 text-white px-2 py-1 rounded text-xs font-medium">
                 Cam {index + 1}
@@ -81,7 +140,8 @@ export function AdminSurveillance() {
               </p>
               <p className="text-slate-400 text-xs">{camera.type}</p>
             </div>
-          </button>)}
+          </button>;
+        })}
       </div>
       {/* Fullscreen Popup */}
       {selectedCameras.length > 0 && <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4">
@@ -95,9 +155,29 @@ export function AdminSurveillance() {
               {selectedCameras.map(cameraId => {
             const camera = cameras.find(c => c.id === cameraId);
             if (!camera) return null;
+            console.log('Fullscreen video URL:', camera.videoUrl);
             return <div key={cameraId} className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
                     <div className="aspect-video bg-slate-950 relative">
-                      <img src={`https://images.unsplash.com/photo-${camera.imageId}?w=800&h=450&fit=crop`} alt={camera.name} className="w-full h-full object-cover" />
+                      {camera.liveStream ? (
+                        renderLiveStream(camera, 'object-contain bg-black')
+                      ) : (
+                        <video 
+                          autoPlay 
+                          loop 
+                          muted 
+                          controls
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            console.error('Fullscreen video error for', camera.videoUrl, e);
+                          }}
+                          onLoadedData={() => {
+                            console.log('Fullscreen video loaded:', camera.videoUrl);
+                          }}
+                        >
+                          <source src={`${camera.videoUrl}?t=${Date.now()}`} type="video/mp4" />
+                          Your browser does not support the video tag.
+                        </video>
+                      )}
                       {camera.alert && <div className="absolute top-3 left-3 bg-red-600 text-white px-2.5 py-1 rounded-lg flex items-center gap-2 animate-pulse text-xs">
                           <AlertTriangleIcon className="w-3.5 h-3.5" />
                           <span className="font-medium">Alert</span>
