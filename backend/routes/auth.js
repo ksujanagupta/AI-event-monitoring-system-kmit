@@ -25,35 +25,35 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 // Route for user signup
-router.post('/signup', upload.single('image'), async (req, res) => {
-  const { name, email, password, role } = req.body;
-  const imagePath = req.file ? `/uploads/${req.file.filename}` : null;
+// router.post('/signup', upload.single('image'), async (req, res) => {
+//   const { name, email, password, role } = req.body;
+//   const imagePath = req.file ? `/uploads/${req.file.filename}` : null;
 
-  try {
-    let user = await User.findOne({ email });
-    if (user) {
-      return res.status(400).json({ msg: 'User already exists' });
-    }
+//   try {
+//     let user = await User.findOne({ email });
+//     if (user) {
+//       return res.status(400).json({ msg: 'User already exists' });
+//     }
 
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
+//     const salt = await bcrypt.genSalt(10);
+//     const hashedPassword = await bcrypt.hash(password, salt);
 
-    user = new User({
-      name,
-      email,
-      password: hashedPassword,
-      role,
-      imagePath,
-      isApproved: role === 'admin' ? true : false
-    });
+//     user = new User({
+//       name,
+//       email,
+//       password: hashedPassword,
+//       role,
+//       imagePath,
+//       isApproved: role === 'admin' ? true : false
+//     });
 
-    await user.save();
-    res.status(201).json({ msg: 'User registered successfully' });
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server error');
-  }
-});
+//     await user.save();
+//     res.status(201).json({ msg: 'User registered successfully' });
+//   } catch (err) {
+//     console.error(err.message);
+//     res.status(500).send('Server error');
+//   }
+// });
 
 // Route for user login
 router.post('/login', async (req, res) => {

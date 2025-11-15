@@ -13,6 +13,8 @@ const UserSchema = new mongoose.Schema({
     longitude: { type: Number },
     accuracy: { type: Number },
   },
+  faceDescriptor: { type: [Number], default: null } // <- add this
+
 });
 
 module.exports = mongoose.model('User', UserSchema);

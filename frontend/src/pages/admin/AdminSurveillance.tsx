@@ -16,7 +16,7 @@ export function AdminSurveillance() {
     name: 'Violence Detection',
     type: 'AI Monitor',
     alert: false,
-    videoSrc: '/violence.mp4',
+    videoSrc: '/video_upload.mp4',
     imageId: 1492684223067
   }, {
     id: 2,
