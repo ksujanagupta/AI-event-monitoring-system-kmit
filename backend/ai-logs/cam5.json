@@ -1,0 +1,30 @@
+[
+  {
+    "Timestamp": "2025-11-15 16:10:05.200",
+    "CameraID": "CAM5",
+    "EventType": "LOST_OBJECT_DETECTED",
+    "Details": "Object matching 'Lost Phone' profile detected. Coordinates: [x:50, y:800] to [x:150, y:900]. Frame: 2005",
+    "ConfidenceScore": 0.94
+  },
+  {
+    "Timestamp": "2025-11-15 16:15:30.980",
+    "CameraID": "CAM5",
+    "EventType": "UNAUTHORIZED_OBJECT_DETECTED",
+    "Details": "Unauthorised 'Gun' object detected carried by Person P12. Bounding Box: [x:650, y:450] to [x:700, y:500]. Frame: 3012",
+    "ConfidenceScore": 0.99
+  },
+  {
+    "Timestamp": "2025-11-15 17:00:10.150",
+    "CameraID": "CAM5",
+    "EventType": "LOST_PERSON_DETECTED",
+    "Details": "Person matching 'Lost Child' profile (Age 5-7, Red Shirt) detected. Tracking ID: T001. Frame: 4500",
+    "ConfidenceScore": 0.96
+  },
+  {
+    "Timestamp": "2025-11-15 17:01:05.300",
+    "CameraID": "CAM5",
+    "EventType": "LOST_PERSON_STATUS_UPDATE",
+    "Details": "Lost Child (T001) is now accompanied by an adult, moving toward Exit 2. Tracking continues. Frame: 4670",
+    "ConfidenceScore": 0.90
+  }
+]

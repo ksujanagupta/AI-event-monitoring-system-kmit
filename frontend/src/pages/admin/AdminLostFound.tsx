@@ -657,7 +657,7 @@ export function AdminLostFound() {
   const [objectProcessingStatus, setObjectProcessingStatus] = useState<Record<string, string>>({});
 
   // Available videos from public folder
-  const availableVideos = ["fire.mp4", "violence.mp4", "video_upload.mp4", "c2.mp4"];
+  const availableVideos = ["fire.mp4", "violence.mp4", "video_upload.mp4", "c2.mp4" , "gun.mp4"];
 
   // -------------------------------------------------------------
   // Upload Handlers

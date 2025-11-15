@@ -1,0 +1,23 @@
+[
+  {
+    "Timestamp": "2025-11-15 19:45:22.567",
+    "CameraID": "CAM3",
+    "EventType": "PRE_VIOLENCE_ACTIVITY",
+    "Details": "Two persons engaged in aggressive gesturing and shouting (audio trigger). Person IDs: P45, P78. Frame: 5400",
+    "ConfidenceScore": 0.78
+  },
+  {
+    "Timestamp": "2025-11-15 19:45:26.890",
+    "CameraID": "CAM3",
+    "EventType": "VIOLENCE_DETECTED",
+    "Details": "Physical altercation detected (striking motions). Action: Fight. Duration: 4 seconds. Frame: 5500",
+    "ConfidenceScore": 0.96
+  },
+  {
+    "Timestamp": "2025-11-15 19:45:35.123",
+    "CameraID": "CAM3",
+    "EventType": "VIOLENCE_ENDED",
+    "Details": "Subjects separated and moving away from each other. Returning to normal activity. Frame: 5700",
+    "ConfidenceScore": 0.92
+  }
+]

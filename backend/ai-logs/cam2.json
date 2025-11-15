@@ -1,0 +1,23 @@
+[
+  {
+    "Timestamp": "2025-11-15 14:30:05.112",
+    "CameraID": "CAM2",
+    "EventType": "CRUD_ACCUMULATION_START",
+    "Details": "Small debris detected near loading dock area. Object count: 3. Max size: 0.1m^2. Frame: 9801",
+    "ConfidenceScore": 0.72
+  },
+  {
+    "Timestamp": "2025-11-15 14:31:40.901",
+    "CameraID": "CAM2",
+    "EventType": "CRUD_ACCUMULATION_INCREASE",
+    "Details": "Large pile of unauthorized waste detected. Area exceeds threshold. Location: [x:100, y:700] to [x:450, y:950]. Frame: 10122",
+    "ConfidenceScore": 0.91
+  },
+  {
+    "Timestamp": "2025-11-15 15:05:01.000",
+    "CameraID": "CAM2",
+    "EventType": "CRUD_REMOVED",
+    "Details": "Accumulation event ended. Area cleared. Debris level back to baseline. Frame: 15500",
+    "ConfidenceScore": 0.95
+  }
+]

@@ -458,6 +458,7 @@ async def search_face_multiple(
     print(f"Query Image: {query.filename}")
     print(f"Video Files: {video_files}")
 
+    MAX_MATCHES = 2
     try:
         # Save query temporarily
         query_tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
@@ -467,8 +468,12 @@ async def search_face_multiple(
         # Parse video list
         file_list = [v.strip() for v in video_files.split(",") if v.strip()]
         all_results = []
+        collected_matches = []
 
         for video_name in file_list:
+            if len(collected_matches) >= MAX_MATCHES:
+                break
+
             video_path = os.path.join(FRONTEND_PUBLIC_DIR, video_name)
 
             if not os.path.exists(video_path):
@@ -492,10 +497,14 @@ async def search_face_multiple(
 
             try:
                 # Run face search for this video
+                matches_needed = MAX_MATCHES - len(collected_matches)
+                if matches_needed <= 0:
+                    break
                 result = run_face_search(
                     query_path=query_tmp.name,
                     video_path=video_path,
-                    output_dir=video_output
+                    output_dir=video_output,
+                    max_matches=matches_needed
                 )
 
                 # Build full URLs for frontend
@@ -505,11 +514,17 @@ async def search_face_multiple(
                             m["output_url"] = (
                                 f"http://localhost:8000/output/face_matches/{video_name.split('.')[0]}/{m['file']}"
                             )
+                            m["video"] = video_name
 
                 result["video"] = video_name
                 all_results.append(result)
+                collected_matches.extend(result.get("matches", []))
 
                 print(f"✅ Completed {video_name}: {result.get('total_matches', 0)} matches found")
+
+                if len(collected_matches) >= MAX_MATCHES:
+                    print("🔚 Match limit reached. Stopping further searches.")
+                    break
 
             except Exception as e:
                 print(f"❌ Error processing {video_name}: {str(e)}")
@@ -532,9 +547,12 @@ async def search_face_multiple(
         return {
             "results": all_results,
             "total_videos": len(file_list),
-            "processed_videos": len([r for r in all_results if "error" not in r])
+            "processed_videos": len([r for r in all_results if "error" not in r]),
+            "matches_returned": collected_matches[:MAX_MATCHES],
+            "max_matches": MAX_MATCHES
         }
 
     except Exception as e:
         print("❌ Error in /search-face-multiple:", str(e))
         return {"error": str(e)}
+    

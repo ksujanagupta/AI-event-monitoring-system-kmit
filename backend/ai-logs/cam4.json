@@ -1,0 +1,30 @@
+[
+  {
+    "Timestamp": "2025-11-15 11:30:00.100",
+    "CameraID": "CAM4_LIVE",
+    "EventType": "LIVESTREAM_START_MONITORING",
+    "Details": "Live stream monitoring initialized. No events detected. Frame: 1",
+    "ConfidenceScore": 1.00
+  },
+  {
+    "Timestamp": "2025-11-15 11:30:15.550",
+    "CameraID": "CAM4_LIVE",
+    "EventType": "FIRE_DETECTED",
+    "Details": "Small flame detected near left wall. Initial severity. Frame: 460",
+    "ConfidenceScore": 0.88
+  },
+  {
+    "Timestamp": "2025-11-15 11:30:18.721",
+    "CameraID": "CAM4_LIVE",
+    "EventType": "VIOLENCE_DETECTED",
+    "Details": "Two people fighting near the fire source. Person IDs: P02, P03. Coincident event. Frame: 550",
+    "ConfidenceScore": 0.95
+  },
+  {
+    "Timestamp": "2025-11-15 11:30:22.000",
+    "CameraID": "CAM4_LIVE",
+    "EventType": "CRITICAL_SITUATION_ALERT",
+    "Details": "Multiple threats: Active Fire and Active Violence. Immediate escalation required. Frame: 650",
+    "ConfidenceScore": 0.97
+  }
+]

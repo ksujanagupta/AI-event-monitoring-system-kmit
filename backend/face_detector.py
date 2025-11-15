@@ -37,12 +37,19 @@ def get_embedding(img_path):
 # ---------------------------------------
 # Search face inside video
 # ---------------------------------------
-def search_face_in_video(query_embedding, video_path, output_dir, threshold=0.7):
+def search_face_in_video(
+    query_embedding,
+    video_path,
+    output_dir,
+    threshold=0.7,
+    max_matches=None,
+):
     os.makedirs(output_dir, exist_ok=True)
 
     cap = cv2.VideoCapture(video_path)
     frame_no = 0
     results = []
+    max_matches = max_matches if max_matches is None else max(0, int(max_matches))
 
     while True:
         ret, frame = cap.read()
@@ -68,6 +75,10 @@ def search_face_in_video(query_embedding, video_path, output_dir, threshold=0.7)
                         "similarity": float(similarity),
                         "file": filename
                     })
+
+                    if max_matches and len(results) >= max_matches:
+                        cap.release()
+                        return results
 
     cap.release()
 

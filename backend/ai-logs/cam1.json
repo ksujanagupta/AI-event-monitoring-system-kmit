@@ -1,0 +1,23 @@
+[
+  {
+    "Timestamp": "2025-11-15 22:01:15.345",
+    "CameraID": "CAM1",
+    "EventType": "FIRE_DETECTED",
+    "Details": "Flame and smoke detected in the upper-right quadrant of the frame. Location: [x:850, y:150] to [x:1100, y:400]. Frame: 1258",
+    "ConfidenceScore": 0.98
+  },
+  {
+    "Timestamp": "2025-11-15 22:01:16.480",
+    "CameraID": "CAM1",
+    "EventType": "FIRE_INTENSITY_INCREASE",
+    "Details": "Fire size increasing, spreading towards the center. Average color temperature high. Frame: 1290",
+    "ConfidenceScore": 0.99
+  },
+  {
+    "Timestamp": "2025-11-15 22:01:25.000",
+    "CameraID": "CAM1",
+    "EventType": "FIRE_EXTINGUISHED",
+    "Details": "No visible flame or significant smoke detected for 5 consecutive seconds. Transitioning to smoke-only monitoring. Frame: 1530",
+    "ConfidenceScore": 0.85
+  }
+]
