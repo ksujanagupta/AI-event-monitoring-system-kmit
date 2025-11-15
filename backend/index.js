@@ -31,6 +31,7 @@ connectDB();
 
 // Ensure uploads directory exists - this is now handled in auth.js before multer uses it
 const UPLOADS_DIR = path.join(__dirname, 'uploads'); // Define it here for static serving
+// const VIDEOS_DIR = path.join(__dirname, 'videos'); // Define it here for static serving
 // if (!fs.existsSync(UPLOADS_DIR)) {
 //   fs.mkdirSync(UPLOADS_DIR);
 // }
@@ -51,6 +52,7 @@ const UPLOADS_DIR = path.join(__dirname, 'uploads'); // Define it here for stati
 app.use(cors());
 app.use(express.json());
 app.use('/uploads', express.static(UPLOADS_DIR)); // Serve static files from uploads directory
+// app.use('/videos', express.static(VIDEOS_DIR)); // Serve static files from videos directory
 
 // Use Auth Routes
 app.use('/api', authRoutes); // All auth routes will be prefixed with /api

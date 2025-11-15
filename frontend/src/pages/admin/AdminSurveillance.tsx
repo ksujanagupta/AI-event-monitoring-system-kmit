@@ -6,27 +6,30 @@ export function AdminSurveillance() {
   const [selectedCameras, setSelectedCameras] = useState<number[]>([]);
   const cameras = [{
     id: 0,
-    name: 'Main Stage',
-    type: 'Primary',
+    name: 'Fire & Smoke Detection',
+    type: 'AI Monitor',
     alert: false,
+    videoSrc: '/fire.mp4',
     imageId: 1492684223066
   }, {
     id: 1,
     name: 'Violence Detection',
     type: 'AI Monitor',
-    alert: true,
+    alert: false,
+    videoSrc: '/violence.mp4',
     imageId: 1492684223067
   }, {
     id: 2,
-    name: 'Fire & Smoke',
+    name: 'Crowd Surge Detection',
     type: 'AI Monitor',
     alert: false,
+    videoSrc: '/crowd.mp4',
     imageId: 1492684223068
   }, {
     id: 3,
-    name: 'Crowd Surge',
-    type: 'AI Monitor',
-    alert: true,
+    name: 'main stage',
+    type: 'Standard',
+    alert: false,
     imageId: 1492684223069
   }, {
     id: 4,
@@ -64,7 +67,7 @@ export function AdminSurveillance() {
       <div className="grid grid-cols-3 gap-4">
         {cameras.map((camera, index) => <button key={camera.id} onClick={() => handleCameraClick(camera.id)} className={`relative bg-slate-900 border rounded-xl overflow-hidden transition-all w-full ${selectedCameras.includes(camera.id) ? 'border-blue-500 ring-2 ring-blue-500' : 'border-slate-800 hover:border-blue-500'}`}>
             <div className="aspect-video bg-slate-950 relative">
-              <img src={`https://images.unsplash.com/photo-${camera.imageId}?w=600&h=338&fit=crop`} alt={camera.name} className="w-full h-full object-cover" />
+              {camera.videoSrc ? (<video src={camera.videoSrc} autoPlay loop muted playsInline className="w-full h-full object-cover" />) : (<img src={`https://images.unsplash.com/photo-${camera.imageId}?w=600&h=338&fit=crop`} alt={camera.name} className="w-full h-full object-cover" />)}
               {camera.alert && <div className="absolute top-2 right-2 w-3 h-3 bg-red-500 rounded-full animate-pulse" />}
               <div className="absolute top-2 left-2 bg-black/70 text-white px-2 py-1 rounded text-xs font-medium">
                 Cam {index + 1}
@@ -97,7 +100,7 @@ export function AdminSurveillance() {
             if (!camera) return null;
             return <div key={cameraId} className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
                     <div className="aspect-video bg-slate-950 relative">
-                      <img src={`https://images.unsplash.com/photo-${camera.imageId}?w=800&h=450&fit=crop`} alt={camera.name} className="w-full h-full object-cover" />
+                      {camera.videoSrc ? (<video src={camera.videoSrc} autoPlay loop muted playsInline className="w-full h-full object-cover" />) : (<img src={`https://images.unsplash.com/photo-${camera.imageId}?w=800&h=450&fit=crop`} alt={camera.name} className="w-full h-full object-cover" />)}
                       {camera.alert && <div className="absolute top-3 left-3 bg-red-600 text-white px-2.5 py-1 rounded-lg flex items-center gap-2 animate-pulse text-xs">
                           <AlertTriangleIcon className="w-3.5 h-3.5" />
                           <span className="font-medium">Alert</span>
