@@ -73,7 +73,7 @@ export function SignUp() {
   const data = await response.json();
 
   if (response.ok) {
-    alert("Account created successfully! Please log in.");
+    alert(data.msg || "Account created. Wait for admin approval, then log in.");
     navigate("/login");
   } else {
     alert(data.msg || "Sign up failed");
@@ -81,13 +81,14 @@ export function SignUp() {
 };
 
   const generateDescriptor = async (imageFile: File) => {
-  await faceapi.nets.ssdMobilenetv1.loadFromUri("/public/models");
-  await faceapi.nets.faceLandmark68Net.loadFromUri("/public/models");
-  await faceapi.nets.faceRecognitionNet.loadFromUri("/public/models");
+  // same detector and weights (frontend/public/models) as FaceScanner used at login
+  await faceapi.nets.tinyFaceDetector.loadFromUri("/models");
+  await faceapi.nets.faceLandmark68Net.loadFromUri("/models");
+  await faceapi.nets.faceRecognitionNet.loadFromUri("/models");
 
   const img = await faceapi.bufferToImage(imageFile);
   const detection = await faceapi
-    .detectSingleFace(img)
+    .detectSingleFace(img, new faceapi.TinyFaceDetectorOptions())
     .withFaceLandmarks()
     .withFaceDescriptor();
 

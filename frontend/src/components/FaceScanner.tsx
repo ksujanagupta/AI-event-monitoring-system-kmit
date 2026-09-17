@@ -6,18 +6,25 @@ declare const faceapi: any;
 
 interface FaceScannerProps {
   onCapture: (descriptor: number[]) => void;
+  onClose: () => void;
 }
 
-export default function FaceScanner({ onCapture }: FaceScannerProps) {
+export default function FaceScanner({ onCapture, onClose }: FaceScannerProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
-  const MODEL_URL =
-    "https://justadudewhohacks.github.io/face-api.js/models";
+  // weights live in frontend/public/models
+  const MODEL_URL = "/models";
 
   useEffect(() => {
     startCamera();
     loadModels();
+    return stopCamera;
   }, []);
+
+  const stopCamera = () => {
+    const stream = videoRef.current?.srcObject as MediaStream | null;
+    stream?.getTracks().forEach((t) => t.stop());
+  };
 
   // Start webcam
   const startCamera = async () => {
@@ -31,7 +38,7 @@ export default function FaceScanner({ onCapture }: FaceScannerProps) {
     }
   };
 
-  // Load FaceAPI models from CDN
+  // Load FaceAPI models
   const loadModels = async () => {
     await Promise.all([
       faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
@@ -39,7 +46,7 @@ export default function FaceScanner({ onCapture }: FaceScannerProps) {
       faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
     ]);
 
-    console.log("✔ FaceAPI Models Loaded From CDN");
+    console.log("✔ FaceAPI models loaded");
   };
 
   // Capture face, compute descriptor, return to parent
@@ -61,12 +68,7 @@ export default function FaceScanner({ onCapture }: FaceScannerProps) {
 
     const descriptor: number[] = Array.from(detection.descriptor);
 
-    // Stop camera after capture
-    if (videoRef.current.srcObject) {
-      const tracks = (videoRef.current.srcObject as MediaStream).getTracks();
-      tracks.forEach((t) => t.stop());
-    }
-
+    stopCamera();
     onCapture(descriptor);
   };
 
@@ -89,6 +91,12 @@ export default function FaceScanner({ onCapture }: FaceScannerProps) {
           className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
         >
           Capture Face
+        </button>
+        <button
+          onClick={onClose}
+          className="mt-4 ml-2 px-4 py-2 bg-slate-300 text-slate-800 rounded-lg hover:bg-slate-400"
+        >
+          Cancel
         </button>
       </div>
     </div>

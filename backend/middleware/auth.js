@@ -23,11 +23,12 @@ function requireRole(...roles) {
 }
 
 // face-api.js descriptors are compared by Euclidean distance (the library's own cutoff is ~0.6)
+const isDescriptor = (d) => Array.isArray(d) && d.length === 128 && d.every(Number.isFinite);
+
 function faceMatches(a, b) {
-  const valid = (d) => Array.isArray(d) && d.length === 128 && d.every(Number.isFinite);
-  if (!valid(a) || !valid(b)) return false;
+  if (!isDescriptor(a) || !isDescriptor(b)) return false;
   const distance = Math.sqrt(a.reduce((sum, x, i) => sum + (x - b[i]) ** 2, 0));
   return distance <= Number(process.env.FACE_MATCH_THRESHOLD || 0.5);
 }
 
-module.exports = { signToken, verifyToken, requireRole, faceMatches };
+module.exports = { signToken, verifyToken, requireRole, isDescriptor, faceMatches };

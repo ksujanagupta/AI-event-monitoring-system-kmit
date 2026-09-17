@@ -27,42 +27,19 @@ export function Login() {
 
   const [requestingLocation, setRequestingLocation] = useState<boolean>(false);
 
-  // ----------------------------------------------------------------
-  // 🔥 FACE CAPTURE HANDLER (descriptor ONLY — no backend call here)
-  // COMMENTED OUT - Face login disabled for volunteers
-  // ----------------------------------------------------------------
-  // const handleFaceCapture = (descriptor: number[]) => {
-  //   setShowScanner(false);
+  // Face descriptor is only captured here; the backend compares it during login
+  const handleFaceCapture = (descriptor: number[]) => {
+    setShowScanner(false);
+    setFormData((prev) => ({ ...prev, faceRecognition: true, faceDescriptor: descriptor }));
+  };
 
-  //   if (!descriptor || descriptor.length !== 128) {
-  //     alert("❌ Could not extract face features. Try again.");
-  //     return;
-  //   }
-
-  //   // Update formData state
-  //   setFormData((prev) => ({
-  //     ...prev,
-  //     faceRecognition: true,
-  //     faceDescriptor: descriptor,
-  //   }));
-
-  //   alert("✔ Face captured successfully!");
-  // };
-
-  // ----------------------------------------------------------------
-  // 🔐 LOGIN HANDLER (backend check)
-  // ----------------------------------------------------------------
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    // Face required only for volunteer
-    // COMMENTED OUT - Face login disabled for volunteers
-    // if (role === "volunteer") {
-    //   if (!formData.faceRecognition || !formData.faceDescriptor) {
-    //     alert("Please verify your face before logging in.");
-    //     return;
-    //   }
-    // }
+    if (role === "volunteer" && !formData.faceDescriptor) {
+      alert("Please scan your face before logging in.");
+      return;
+    }
 
     // ---- Location for volunteers
     let locationData: Record<string, any> = {};
@@ -90,33 +67,17 @@ export function Login() {
       setRequestingLocation(false);
     }
 
-    // ---------- FACE VERIFICATION CALL (ONLY FOR VOLUNTEER) ----------
-    // COMMENTED OUT - Face login disabled for volunteers
-    // if (role === "volunteer") {
-    //   const faceRes = await fetch(
-    //     "http://localhost:5000/api/volunteer/face-login",
-    //     {
-    //       method: "POST",
-    //       headers: { "Content-Type": "application/json" },
-    //       body: JSON.stringify({
-    //         name: formData.name,
-    //         descriptor: formData.faceDescriptor,
-    //       }),
-    //     }
-    //   );
-
-    //   const faceData = await faceRes.json();
-    //   if (!faceRes.ok) {
-    //     alert(faceData.msg || "❌ Face verification failed.");
-    //     return;
-    //   }
-    // }
-
     // ---------- NORMAL LOGIN CALL ----------
     const response = await apiFetch("/api/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...formData, role, ...locationData }),
+      body: JSON.stringify({
+        name: formData.name,
+        password: formData.password,
+        role,
+        descriptor: role === "volunteer" ? formData.faceDescriptor : undefined,
+        ...locationData,
+      }),
     });
 
     const data = await response.json();
@@ -215,8 +176,7 @@ export function Login() {
             </div>
 
             {/* Face Scan */}
-            {/* COMMENTED OUT - Face login disabled for volunteers */}
-            {/* {role === "volunteer" && (
+            {role === "volunteer" && (
               <div className="bg-slate-900/50 border border-slate-600 rounded-lg p-4">
                 <div className="flex items-center gap-3 mb-3">
                   <ScanFaceIcon className="w-6 h-6 text-blue-400" />
@@ -234,7 +194,7 @@ export function Login() {
                       : "bg-blue-600 hover:bg-blue-700"
                   } text-white`}
                 >
-                  {formData.faceRecognition ? "Face Verified ✓" : "Scan Face"}
+                  {formData.faceRecognition ? "Face Captured ✓" : "Scan Face"}
                 </button>
 
                 {requestingLocation && (
@@ -243,7 +203,7 @@ export function Login() {
                   </p>
                 )}
               </div>
-            )} */}
+            )}
 
             <button
               type="submit"
@@ -255,8 +215,9 @@ export function Login() {
         </div>
       </motion.div>
 
-      {/* COMMENTED OUT - Face login disabled for volunteers */}
-      {/* {showScanner && <FaceScanner onCapture={handleFaceCapture} />} */}
+      {showScanner && (
+        <FaceScanner onCapture={handleFaceCapture} onClose={() => setShowScanner(false)} />
+      )}
     </div>
   );
 }
