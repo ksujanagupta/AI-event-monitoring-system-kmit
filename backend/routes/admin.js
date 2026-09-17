@@ -123,14 +123,18 @@ router.put('/admin/issues/:id/resolve', adminOnly, async (req, res) => {
 // Admin route to create a new alert
 router.post('/admin/alerts', adminOnly, async (req, res) => {
   try {
-    const { title, message, severity, audience } = req.body;
+    const { title, message, severity, audience, location } = req.body;
 
-    const defaultLocation = { latitude: 17.3850, longitude: 78.4867 };
+    // Picked on the admin map; falls back to the venue center (VENUE_CENTER in frontend/src/config.ts)
+    const picked = location && Number.isFinite(location.latitude) && Number.isFinite(location.longitude);
+    const alertLocation = picked
+      ? { latitude: location.latitude, longitude: location.longitude }
+      : { latitude: 17.3850, longitude: 78.4867 };
 
     const newAlert = new Issue({
       reportedBy: req.user.id,
       description: `${title}: ${message}`,
-      location: defaultLocation,
+      location: alertLocation,
       status: 'reported',
       isAdminCreated: true,
       severity: severity,

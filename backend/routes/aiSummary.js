@@ -7,79 +7,57 @@ const fs = require('fs');
 const { GoogleGenAI } = require('@google/genai');
 const { requireRole } = require('../middleware/auth');
 
-// NOTE: It is assumed that dotenv.config() is called in your index.js
 const apiKey = process.env.GEMINI_API_KEY;
 if (!apiKey) {
     console.error("GEMINI_API_KEY environment variable is NOT set.");
-    // In a production app, you might crash the server or disable the route
 }
-const ai = apiKey ? new GoogleGenAI(apiKey) : null;
+const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
 
-
-// --- 1. Function to Load and Combine Log Data ---
-// Define the directory relative to the route file's location
-// routes/aiSummary.js
-
-// ... imports ...
-
-// Define the directory relative to the route file's location
-// NOTE: __dirname is /path/to/backend/routes, so we step up (..) to backend/
-const LOGS_DIR = path.join(__dirname, '..', 'ai-logs'); 
-let LOG_CONTEXT = '';
-
-// ... rest of the code ...
+// Camera logs: hand-written cam*.json files plus cam6.jsonl appended by server/main_live_detection.py
+const LOGS_DIR = path.join(__dirname, '..', 'ai-logs');
+const MAX_LOG_CHARS = 50000; // keep the prompt bounded as the live log grows
 
 function loadLogData() {
-    console.log(`Loading AI logs from: ${LOGS_DIR}`);
     if (!fs.existsSync(LOGS_DIR)) {
-        console.error(`Log directory not found: ${LOGS_DIR}`);
         return "Log data context unavailable: Directory not found.";
     }
 
-    const logFiles = fs.readdirSync(LOGS_DIR).filter(file => file.endsWith('.json'));
-    
-    let combinedLogText = "--- BEGIN CONTEXT LOG FILES ---\n";
+    const logFiles = fs.readdirSync(LOGS_DIR).filter(file => file.endsWith('.json') || file.endsWith('.jsonl'));
 
+    let combinedLogText = "";
     for (const file of logFiles) {
         try {
-            const filePath = path.join(LOGS_DIR, file);
-            const content = fs.readFileSync(filePath, 'utf-8');
-            combinedLogText += `\n--- FILE: ${file} ---\n`;
-            combinedLogText += content;
-            combinedLogText += "\n";
+            const content = fs.readFileSync(path.join(LOGS_DIR, file), 'utf-8');
+            combinedLogText += `\n--- FILE: ${file} ---\n${content}\n`;
         } catch (error) {
             console.error(`Error reading log file ${file}:`, error);
         }
     }
 
-    combinedLogText += "\n--- END CONTEXT LOG FILES ---\n";
-    return combinedLogText;
+    // keep the newest part: the live log is appended at the end
+    return "--- BEGIN CONTEXT LOG FILES ---\n" + combinedLogText.slice(-MAX_LOG_CHARS) + "\n--- END CONTEXT LOG FILES ---\n";
 }
 
-// Load logs once when the server starts
-LOG_CONTEXT = loadLogData();
-
-
-// --- 2. Chatbot API Endpoint ---
+// --- Chatbot API Endpoint ---
 router.post('/summary/chat', requireRole('admin'), async (req, res) => {
     if (!ai) {
         return res.status(503).json({ error: "AI Service is unavailable. Check API Key." });
     }
-    
-    const { userMessage, chatHistory } = req.body;
+
+    const { userMessage, chatHistory = [] } = req.body;
 
     if (!userMessage) {
         return res.status(400).json({ error: "User message is required." });
     }
 
-    // A. Construct the system instruction and context
-    const systemInstruction = `You are an AI assistant specialized in analyzing event log files. Your task is to provide concise, accurate summaries and answers based ONLY on the provided log data. 
-    The logs contain information about fire, crud, violence, lost objects, and lost persons.
-    The log data is provided below:\n${LOG_CONTEXT}`;
+    // Read logs on every request so new live detections are included
+    const systemInstruction = `You are an AI assistant specialized in analyzing event log files. Your task is to provide concise, accurate summaries and answers based ONLY on the provided log data.
+    The logs contain information about fire, crowd, violence, lost objects, and lost persons.
+    The log data is provided below:\n${loadLogData()}`;
 
-    // B. Format Chat History for the API (Gemini expects 'model' role for assistant responses)
-    const history = chatHistory
-        .filter(msg => msg.role !== 'assistant' || msg.content !== 'Hello! Your log files are pre-loaded on the server. Ask me questions about fire, violence, lost objects, and person detection events.') // Remove initial welcome message
+    // Gemini expects 'model' role for assistant responses; drop the UI's welcome message(s) before the first user turn
+    const firstUser = chatHistory.findIndex(msg => msg.role === 'user');
+    const history = (firstUser === -1 ? [] : chatHistory.slice(firstUser))
         .map(msg => ({
             role: msg.role === 'user' ? 'user' : 'model',
             parts: [{ text: msg.content }]
@@ -98,7 +76,6 @@ router.post('/summary/chat', requireRole('admin'), async (req, res) => {
             }
         });
 
-        // C. Send the AI's response back to the frontend
         res.json({
             response: response.text
         });

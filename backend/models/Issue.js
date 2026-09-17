@@ -15,6 +15,7 @@ const IssueSchema = new mongoose.Schema({
   resolvedAt: { type: Date },
   isAdminCreated: { type: Boolean, default: false },
   audience: { type: String, enum: ['volunteers', 'attendees', 'both'], default: 'both' },
+  severity: { type: String, enum: ['low', 'medium', 'high', 'critical'], default: 'medium' },
 });
 
 module.exports = mongoose.model('Issue', IssueSchema);

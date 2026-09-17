@@ -1,11 +1,12 @@
 import React, { useState, useEffect, Fragment } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapContainer, TileLayer, Marker, Popup, Circle, CircleMarker } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Circle, CircleMarker, useMapEvents } from 'react-leaflet';
 import { BellIcon, CheckIcon, XIcon, UserIcon, ClockIcon, MapPinIcon, EyeIcon, PlusIcon, SendIcon, ArrowLeftIcon } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet'; // Import Leaflet library
 import { Socket } from 'socket.io-client';
 import { apiFetch, connectSocket } from '../../api';
+import { VENUE_CENTER } from '../../config';
 
 // Fix for default marker icon not appearing (common issue with react-leaflet)
 // This ensures Leaflet can find its default marker images
@@ -51,7 +52,7 @@ export function AdminAlerts() {
     title: '',
     message: '',
     severity: 'medium',
-    location: '',
+    location: null as { latitude: number; longitude: number } | null,
     audience: 'both' as 'volunteers' | 'attendees' | 'both'
   });
 
@@ -271,7 +272,7 @@ export function AdminAlerts() {
           title: '',
           message: '',
           severity: 'medium',
-          location: '',
+          location: null,
           audience: 'both'
         });
       } else {
@@ -317,7 +318,7 @@ export function AdminAlerts() {
       <div className="flex-1 flex overflow-hidden">
         {/* Map Section */}
         <div className="flex-1 relative">
-          <MapContainer center={[17.3850, 78.4867]} zoom={13} style={{
+          <MapContainer center={VENUE_CENTER} zoom={15} style={{
           height: '100%',
           width: '100%'
         }} className="z-0">
@@ -607,7 +608,7 @@ export function AdminAlerts() {
               title: '',
               message: '',
               severity: 'medium',
-              location: '',
+              location: null,
                     audience: 'both',
             });
                 }}
@@ -623,7 +624,7 @@ export function AdminAlerts() {
               title: '',
               message: '',
               severity: 'medium',
-              location: '',
+              location: null,
                     audience: 'both',
             });
                 }}
@@ -683,17 +684,15 @@ export function AdminAlerts() {
               </div>
               <div>
                 <label className="block text-slate-300 mb-1.5 text-sm font-medium">
-                  Location (Optional)
+                  Location (click the map; defaults to venue center)
                 </label>
-                <input
-                  type="text"
-                  value={newAlertForm.location}
-                  onChange={(e) =>
-                    setNewAlertForm({ ...newAlertForm, location: e.target.value })
-                  }
-                  placeholder="e.g., Main Stage"
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500"
-                />
+                <MapContainer center={VENUE_CENTER} zoom={16} style={{ height: '180px', width: '100%' }} className="rounded-lg z-0">
+                  <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                  <ClickToPick onPick={(latitude, longitude) => setNewAlertForm({ ...newAlertForm, location: { latitude, longitude } })} />
+                  {newAlertForm.location && (
+                    <CircleMarker center={[newAlertForm.location.latitude, newAlertForm.location.longitude]} radius={8} pathOptions={{ color: 'red' }} />
+                  )}
+                </MapContainer>
               </div>
               <div>
                 <label className="block text-slate-300 mb-1.5 text-sm font-medium">
@@ -827,4 +826,10 @@ export function AdminAlerts() {
       {/* )} */}
                 </div>
   );
+}
+
+// Sets the create-alert location from a click on the small map
+function ClickToPick({ onPick }: { onPick: (latitude: number, longitude: number) => void }) {
+  useMapEvents({ click: (e) => onPick(e.latlng.lat, e.latlng.lng) });
+  return null;
 }

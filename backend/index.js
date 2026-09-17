@@ -54,6 +54,7 @@ app.use('/api', require('./routes/auth'));
 app.use('/api', require('./routes/attendee'));
 app.use('/api', require('./routes/admin'));
 app.use('/api', require('./routes/volunteer'));
+app.use('/api', require('./routes/lostFound'));
 
 // Make io available to our routers
 app.set('io', io);

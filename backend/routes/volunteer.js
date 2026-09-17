@@ -19,6 +19,26 @@ router.get('/volunteer/assigned-issues', volunteerOnly, async (req, res) => {
   }
 });
 
+// Route for volunteers to share their live location (sent from the Geo-Location page)
+router.put('/volunteer/location', volunteerOnly, async (req, res) => {
+  const latitude = Number(req.body.latitude);
+  const longitude = Number(req.body.longitude);
+  const accuracy = Number(req.body.accuracy);
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+    return res.status(400).json({ msg: 'latitude and longitude are required.' });
+  }
+
+  try {
+    await User.findByIdAndUpdate(req.user.id, {
+      lastKnownLocation: { latitude, longitude, accuracy: Number.isFinite(accuracy) ? accuracy : undefined },
+    });
+    res.json({ msg: 'Location updated' });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server error');
+  }
+});
+
 // Route for volunteers to accept an assigned issue
 router.put('/volunteer/issues/:issueId/accept', volunteerOnly, async (req, res) => {
   try {

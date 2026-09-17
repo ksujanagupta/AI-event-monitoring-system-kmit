@@ -90,7 +90,7 @@ export function AdminAISummary() {
         const res = await apiFetch('/api/summary/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userMessage, chatHistory: newChatHistory }),
+          body: JSON.stringify({ userMessage, chatHistory }), // prior turns; the backend appends userMessage
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || data.msg || res.statusText);

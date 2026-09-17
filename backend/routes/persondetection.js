@@ -93,7 +93,7 @@ router.post(
 
       // FastAPI returned error
       if (error.response) {
-        return res.status(error.response.status).json(error.response.data);
+        return res.status(error.response.status).json({ error: error.response.data?.detail || error.message });
       }
 
       return res.status(500).json({ error: error.message });
@@ -191,7 +191,7 @@ router.post(
 
       // FastAPI returned error
       if (error.response) {
-        return res.status(error.response.status).json(error.response.data);
+        return res.status(error.response.status).json({ error: error.response.data?.detail || error.message });
       }
 
       return res.status(500).json({ error: error.message });

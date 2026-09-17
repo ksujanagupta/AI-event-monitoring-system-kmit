@@ -1,58 +1,28 @@
-import React, { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
 import { MapIcon, NavigationIcon, AlertTriangleIcon, InfoIcon } from 'lucide-react';
+import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { ASSEMBLY_POINTS, EXITS, VENUE_CENTER, formatDistance } from '../../config';
 export function AttendeeEvacuation() {
   const [selectedExit, setSelectedExit] = useState<number | null>(null);
-  const currentLocation = {
-    lat: 40.7128,
-    lng: -74.006
-  };
-  const exits = [{
-    id: 1,
-    name: 'North Exit',
-    lat: 40.7148,
-    lng: -74.006,
-    distance: '200m',
-    capacity: 'High'
-  }, {
-    id: 2,
-    name: 'South Exit',
-    lat: 40.7108,
-    lng: -74.006,
-    distance: '250m',
-    capacity: 'Medium'
-  }, {
-    id: 3,
-    name: 'East Exit',
-    lat: 40.7128,
-    lng: -74.004,
-    distance: '180m',
-    capacity: 'High'
-  }, {
-    id: 4,
-    name: 'West Exit',
-    lat: 40.7128,
-    lng: -74.008,
-    distance: '220m',
-    capacity: 'Low'
-  }];
-  const assemblyPoints = [{
-    id: 1,
-    name: 'Assembly Point A',
-    lat: 40.7158,
-    lng: -74.006,
-    description: 'Main parking lot'
-  }, {
-    id: 2,
-    name: 'Assembly Point B',
-    lat: 40.7098,
-    lng: -74.006,
-    description: 'South field'
-  }];
+  const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(null);
+  useEffect(() => {
+    navigator.geolocation?.getCurrentPosition(
+      pos => setCurrentLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      err => console.error('Error getting geolocation:', err),
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  }, []);
+  // Distances from the attendee, or from the venue center until their location is known
+  const origin = currentLocation ? L.latLng(currentLocation.lat, currentLocation.lng) : L.latLng(VENUE_CENTER);
+  const exits = EXITS.map(exit => ({ ...exit, meters: origin.distanceTo([exit.lat, exit.lng]) }))
+    .sort((a, b) => a.meters - b.meters)
+    .map(exit => ({ ...exit, distance: formatDistance(exit.meters) }));
+  const assemblyPoints = ASSEMBLY_POINTS;
   const getPathToExit = (exitId: number) => {
     const exit = exits.find(e => e.id === exitId);
-    if (!exit) return [];
+    if (!exit || !currentLocation) return [];
     return [[currentLocation.lat, currentLocation.lng], [exit.lat, exit.lng]];
   };
   return <div className="p-6 space-y-6">
@@ -77,19 +47,19 @@ export function AttendeeEvacuation() {
       <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden" style={{
       height: '500px'
     }}>
-        <MapContainer center={[currentLocation.lat, currentLocation.lng]} zoom={15} style={{
+        <MapContainer center={VENUE_CENTER} zoom={16} style={{
         height: '100%',
         width: '100%'
       }} className="z-0">
           <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' />
           {/* Current Location */}
-          <Marker position={[currentLocation.lat, currentLocation.lng]}>
-            <Popup>
-              <div className="p-2">
-                <p className="font-bold">You Are Here</p>
-              </div>
-            </Popup>
-          </Marker>
+          {currentLocation && <Marker position={[currentLocation.lat, currentLocation.lng]}>
+              <Popup>
+                <div className="p-2">
+                  <p className="font-bold">You Are Here</p>
+                </div>
+              </Popup>
+            </Marker>}
           {/* Exit Markers */}
           {exits.map(exit => <Marker key={exit.id} position={[exit.lat, exit.lng]}>
               <Popup>

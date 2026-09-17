@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiFetch } from "../../api";
+import { LostReport, createLostReport, loadLostReports, markReportFound, reportImage, reportTime } from "../../lostReports";
 import {
   PackageSearchIcon,
   PlusIcon,
@@ -20,7 +21,7 @@ import {
 // Interfaces
 // -------------------------------------------------------------
 interface LostItem {
-  id: number;
+  id: string;
   item: string;
   location: string;
   reportedBy: string;
@@ -31,12 +32,12 @@ interface LostItem {
   cctv?: {
     camera: string;
     timestamp: string;
-    frame: string; // base64 frame from backend
+    frame: string; // matched frame image URL
   };
 }
 
 interface LostChild {
-  id: number;
+  id: string;
   name: string;
   age: number;
   lastSeen: string;
@@ -84,9 +85,43 @@ export function AdminLostFound() {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [uploadedVideo, setUploadedVideo] = useState<File | null>(null);
 
-  // Dummy database
-  const [lostItems, setLostItems] = useState<LostItem[]>([]);
-  const [lostChildren, setLostChildren] = useState<LostChild[]>([]);
+  // Reports saved in the backend
+  const [reports, setReports] = useState<LostReport[]>([]);
+  useEffect(() => {
+    loadLostReports().then(setReports).catch((err) => alert(err.message));
+  }, []);
+
+  const cctvFor = (r: LostReport) =>
+    r.match?.output_url
+      ? { camera: r.match.video || "Uploaded video", timestamp: `frame ${r.match.frame}`, frame: r.match.output_url }
+      : undefined;
+  const lostItems: LostItem[] = reports
+    .filter((r) => r.type === "item")
+    .map((r) => ({
+      id: r._id,
+      item: r.item || "",
+      location: r.location || "",
+      reportedBy: r.reportedBy || "",
+      time: reportTime(r),
+      status: r.status === "found" ? "found" : "pending",
+      description: r.description || "",
+      image: reportImage(r),
+      cctv: cctvFor(r),
+    }));
+  const lostChildren: LostChild[] = reports
+    .filter((r) => r.type === "child")
+    .map((r) => ({
+      id: r._id,
+      name: r.name || "",
+      age: r.age ?? 0,
+      lastSeen: r.location || "",
+      time: reportTime(r),
+      status: r.status === "found" ? "found" : "searching",
+      description: r.description || "",
+      guardian: r.guardian || "",
+      image: reportImage(r),
+      cctv: cctvFor(r),
+    }));
 
   // ---------------- FACE SEARCH STATES (for missing children) ----------------
   const [showFaceSearchModal, setShowFaceSearchModal] = useState(false);
@@ -200,57 +235,23 @@ export function AdminLostFound() {
 
 
   // -------------------------------------------------------------
-  // Submit Report → Add into lists
+  // Submit Report → save to backend
   // -------------------------------------------------------------
-  const handleSubmitReport = () => {
-    const now = new Date();
-    const timeString = now.toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-    });
-
-    if (reportType === "item") {
-      const newItem: LostItem = {
-        id: lostItems.length + 1,
-        item: formData.item,
-        location: formData.location,
-        reportedBy: formData.reportedBy,
-        time: timeString,
-        status: matchFound ? "found" : "pending",
-        description: formData.description,
-        image: uploadedImage || undefined,
-        cctv: matchFound
-          ? {
-              camera: backendResult.camera,
-              timestamp: backendResult.timestamp,
-              frame: backendResult.frame,
-            }
-          : undefined,
-      };
-      setLostItems([newItem, ...lostItems]);
-    } else {
-      const newChild: LostChild = {
-        id: lostChildren.length + 1,
-        name: formData.name,
-        age: parseInt(formData.age),
-        lastSeen: formData.location,
-        time: timeString,
-        status: matchFound ? "found" : "searching",
-        description: formData.description,
-        guardian: formData.guardian,
-        image: uploadedImage || undefined,
-        cctv: matchFound
-          ? {
-              camera: backendResult.camera,
-              timestamp: backendResult.timestamp,
-              frame: backendResult.frame,
-            }
-          : undefined,
-      };
-      setLostChildren([newChild, ...lostChildren]);
+  const handleSubmitReport = async () => {
+    // first frame the AI search matched, if any
+    const firstMatch = matchFound ? backendResult?.matches?.[0] : undefined;
+    try {
+      const image = uploadedImage ? await (await fetch(uploadedImage)).blob() : null;
+      const report = await createLostReport(
+        { type: reportType, ...formData },
+        image,
+        firstMatch && { video: uploadedVideo?.name, frame: firstMatch.frame, output_url: firstMatch.output_url }
+      );
+      setReports((prev) => [report, ...prev]);
+      resetForm();
+    } catch (err: any) {
+      alert(`Could not save report: ${err.message}`);
     }
-
-    resetForm();
   };
 
   const resetForm = () => {
@@ -272,19 +273,12 @@ export function AdminLostFound() {
     });
   };
 
-  const markAsFound = (id: number, type: "item" | "child") => {
-    if (type === "item") {
-      setLostItems(
-        lostItems.map((i) =>
-          i.id === id ? { ...i, status: "found" } : i
-        )
-      );
-    } else {
-      setLostChildren(
-        lostChildren.map((c) =>
-          c.id === id ? { ...c, status: "found" } : c
-        )
-      );
+  const markAsFound = async (id: string) => {
+    try {
+      const updated = await markReportFound(id);
+      setReports((prev) => prev.map((r) => (r._id === id ? updated : r)));
+    } catch (err: any) {
+      alert(`Could not update report: ${err.message}`);
     }
   };
 
@@ -606,7 +600,7 @@ function ItemsList({
   onSearchClick,
 }: {
   items: LostItem[];
-  markAsFound: (id: number, type: "item") => void;
+  markAsFound: (id: string) => void;
   onSearchClick: () => void;
 }) {
   return (
@@ -674,7 +668,7 @@ function ItemsList({
 
               {item.status === "pending" && (
                 <button
-                  onClick={() => markAsFound(item.id, "item")}
+                  onClick={() => markAsFound(item.id)}
                   className="mt-3 w-full px-3 py-1 bg-green-600 text-white rounded-lg text-sm"
                 >
                   Mark As Found
@@ -697,7 +691,7 @@ function ChildrenList({
   onSearchClick,
 }: {
   children: LostChild[];
-  markAsFound: (id: number, type: "child") => void;
+  markAsFound: (id: string) => void;
   onSearchClick: () => void;
 }) {
   return (
@@ -768,7 +762,7 @@ function ChildrenList({
 
               {child.status === "searching" && (
                 <button
-                  onClick={() => markAsFound(child.id, "child")}
+                  onClick={() => markAsFound(child.id)}
                   className="mt-3 w-full px-3 py-1 bg-green-600 text-white rounded-lg text-sm"
                 >
                   Mark As Found

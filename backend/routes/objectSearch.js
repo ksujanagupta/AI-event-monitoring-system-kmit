@@ -103,13 +103,12 @@ router.post("/search-object", staff, upload.fields([
         if (error.response) {
             // FastAPI returned an error
             return res.status(error.response.status || 500).json({
-                error: error.response.data || error.message
+                error: error.response.data?.detail || error.message
             });
         }
 
         res.status(500).json({
-            error: error.message,
-            details: error.stack
+            error: error.message
         });
     }
 });
@@ -199,13 +198,12 @@ router.post("/search-object-multiple", staff, upload.single("query"), async (req
         if (error.response) {
             // FastAPI returned an error
             return res.status(error.response.status || 500).json({
-                error: error.response.data || error.message
+                error: error.response.data?.detail || error.message
             });
         }
 
         res.status(500).json({
-            error: error.message,
-            details: error.stack
+            error: error.message
         });
     }
 });

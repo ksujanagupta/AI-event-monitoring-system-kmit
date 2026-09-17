@@ -1,9 +1,9 @@
-import React, { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiFetch } from "../../api";
+import { LostReport, loadLostReports, markReportFound, reportTime } from "../../lostReports";
 import {
   PackageSearchIcon,
-  PlusIcon,
   CheckIcon,
   MapPinIcon,
   ClockIcon,
@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 
 interface LostItem {
-  id: number;
+  id: string;
   item: string;
   location: string;
   time: string;
@@ -21,7 +21,7 @@ interface LostItem {
 }
 
 interface LostChild {
-  id: number;
+  id: string;
   name: string;
   age: number;
   lastSeen: string;
@@ -34,49 +34,32 @@ export function VolunteerLostFound() {
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState<"items" | "children">("items");
-  const [showNewReportModal, setShowNewReportModal] = useState(false);
-  const [reportType, setReportType] = useState<"item" | "child">("item");
+  // Reports saved in the backend (created from the admin Lost & Found page)
+  const [reports, setReports] = useState<LostReport[]>([]);
+  useEffect(() => {
+    loadLostReports().then(setReports).catch((err) => alert(err.message));
+  }, []);
 
-  // FOR NORMAL LOST & FOUND
-  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
-  const [formData, setFormData] = useState({
-    name: "",
-    age: "",
-    item: "",
-    description: "",
-    location: "",
-    reportedBy: "",
-  });
-
-  // DUMMY DATA
-  const [lostItems, setLostItems] = useState<LostItem[]>([
-    {
-      id: 1,
-      item: "Black Backpack",
-      location: "Main Stage",
-      time: "15 min ago",
-      status: "searching",
-    },
-    {
-      id: 2,
-      item: "iPhone 13 Pro",
-      location: "Food Court",
-      time: "32 min ago",
-      status: "searching",
-    },
-  ]);
-
-  const [lostChildren, setLostChildren] = useState<LostChild[]>([
-    {
-      id: 1,
-      name: "Lucas Brown",
-      age: 5,
-      lastSeen: "Play Area",
-      description: "Green hoodie, black pants",
-      time: "5 min ago",
-      status: "searching",
-    },
-  ]);
+  const lostItems: LostItem[] = reports
+    .filter((r) => r.type === "item")
+    .map((r) => ({
+      id: r._id,
+      item: r.item || "",
+      location: r.location || "",
+      time: reportTime(r),
+      status: r.status === "found" ? "found" : "searching",
+    }));
+  const lostChildren: LostChild[] = reports
+    .filter((r) => r.type === "child")
+    .map((r) => ({
+      id: r._id,
+      name: r.name || "",
+      age: r.age ?? 0,
+      lastSeen: r.location || "",
+      description: r.description || "",
+      time: reportTime(r),
+      status: r.status === "found" ? "found" : "searching",
+    }));
 
   // ---------------- AI SEARCH STATES ----------------
   const [showSearchModal, setShowSearchModal] = useState(false);
@@ -286,72 +269,14 @@ export function VolunteerLostFound() {
   };
 
   // -------------- LOST & FOUND FUNCTIONS --------------
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onloadend = () => setUploadedImage(reader.result as string);
-    reader.readAsDataURL(file);
-  };
-
-  const handleFoundItem = (id: number) => {
-    setLostItems(
-      lostItems.map((item) =>
-        item.id === id ? { ...item, status: "found" } : item
-      )
-    );
-    alert("Item marked as found.");
-  };
-
-  const handleFoundChild = (id: number) => {
-    setLostChildren(
-      lostChildren.map((child) =>
-        child.id === id ? { ...child, status: "found" } : child
-      )
-    );
-    alert("Child marked as found!");
-  };
-
-  const handleSubmitReport = () => {
-    const now = new Date();
-    const timeString = now.toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-    });
-
-    if (reportType === "item") {
-      const newItem: LostItem = {
-        id: lostItems.length + 1,
-        item: formData.item,
-        location: formData.location,
-        time: timeString,
-        status: "found",
-      };
-      setLostItems([newItem, ...lostItems]);
-    } else {
-      const newChild: LostChild = {
-        id: lostChildren.length + 1,
-        name: formData.name,
-        age: parseInt(formData.age),
-        lastSeen: formData.location,
-        description: formData.description,
-        time: timeString,
-        status: "found",
-      };
-      setLostChildren([newChild, ...lostChildren]);
+  const markFound = async (id: string, message: string) => {
+    try {
+      const updated = await markReportFound(id);
+      setReports((prev) => prev.map((r) => (r._id === id ? updated : r)));
+      alert(message);
+    } catch (err: any) {
+      alert(`Could not update report: ${err.message}`);
     }
-
-    setShowNewReportModal(false);
-    setUploadedImage(null);
-    setFormData({
-      name: "",
-      age: "",
-      item: "",
-      description: "",
-      location: "",
-      reportedBy: "",
-    });
   };
 
   // --------------------------------------------------
@@ -368,14 +293,6 @@ export function VolunteerLostFound() {
         </div>
 
         <div className="flex gap-3">
-          <button
-            onClick={() => setShowNewReportModal(true)}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2"
-          >
-            <PlusIcon className="w-5 h-5" />
-            Report Found Item
-          </button>
-
           {/* NEW AI SEARCH BUTTON */}
           <button
             onClick={() => setShowSearchModal(true)}
@@ -434,7 +351,7 @@ export function VolunteerLostFound() {
 
               {item.status === "searching" && (
                 <button
-                  onClick={() => handleFoundItem(item.id)}
+                  onClick={() => markFound(item.id, "Item marked as found.")}
                   className="mt-3 px-4 py-2 bg-green-600 text-white rounded-lg"
                 >
                   Mark Found
@@ -478,7 +395,7 @@ export function VolunteerLostFound() {
 
               {child.status === "searching" && (
                 <button
-                  onClick={() => handleFoundChild(child.id)}
+                  onClick={() => markFound(child.id, "Child marked as found!")}
                   className="mt-3 px-4 py-2 bg-green-600 text-white rounded-lg"
                 >
                   Mark Found
