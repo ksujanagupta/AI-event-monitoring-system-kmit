@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShieldCheckIcon, UserIcon, LockIcon, MailIcon, UploadIcon } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { apiFetch } from '../../api';
 declare const faceapi: any;
 
 export function SignUp() {
@@ -64,7 +65,7 @@ export function SignUp() {
     formDataToSend.append("image", formData.image);
   }
 
-  const response = await fetch("http://localhost:5000/api/signup", {
+  const response = await apiFetch("/api/signup", {
     method: "POST",
     body: formDataToSend,
   });

@@ -1,94 +1,63 @@
 const express = require('express');
 const dotenv = require('dotenv');
-const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
 const cors = require('cors');
-const multer = require('multer'); // Multer is now imported and configured in auth.js
 const path = require('path');
-const fs = require('fs');
 const http = require('http');
 const { Server } = require('socket.io');
-const objectSearchMultiRoute = require("./routes/objectSearchMulti");
 
 dotenv.config(); // Load environment variables from .env file
 
+if (!process.env.JWT_SECRET) {
+  console.error('JWT_SECRET is not set. Add it to backend/.env (see .env.example).');
+  process.exit(1);
+}
+
+const connectDB = require('./config/db');
+const { verifyToken } = require('./middleware/auth');
+
 const app = express();
-const server = http.createServer(app); // Create an HTTP server
+const server = http.createServer(app);
+const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || "http://localhost:5173";
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173", // Allow your frontend origin
+    origin: FRONTEND_ORIGIN,
     methods: ["GET", "POST"],
   },
 });
 const PORT = process.env.PORT || 5000;
 
-const connectDB = require('./config/db'); // Import DB connection
-const User = require('./models/User'); // Import User model
-const Issue = require('./models/Issue'); // Import Issue model
-const authRoutes = require('./routes/auth'); // Import auth routes
+// Only logged-in users may open a socket
+io.use((socket, next) => {
+  try {
+    socket.user = verifyToken(socket.handshake.auth?.token);
+    next();
+  } catch {
+    next(new Error('unauthorized'));
+  }
+});
 
-// --------------------------------------------------
-// Global middleware needs to run BEFORE registering routes
-// --------------------------------------------------
 app.use(cors({
-  origin: process.env.FRONTEND_ORIGIN || "http://localhost:5173",
+  origin: FRONTEND_ORIGIN,
   credentials: true,
 }));
-app.use(express.json({ limit: '1mb' })); // parse JSON
+app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-app.use("/api", objectSearchMultiRoute);
-
-const faceSearchRoutes = require("./routes/persondetection.js"); 
-app.use("/api", faceSearchRoutes);
-
-
-const aisummary = require("./routes/aiSummary.js"); 
-app.use("/api", aisummary);
-
-// Connect to database
 connectDB();
 
-// Ensure uploads directory exists - this is now handled in auth.js before multer uses it
-const UPLOADS_DIR = path.join(__dirname, 'uploads'); // Define it here for static serving
-// const VIDEOS_DIR = path.join(__dirname, 'videos'); // Define it here for static serving
-// if (!fs.existsSync(UPLOADS_DIR)) {
-//   fs.mkdirSync(UPLOADS_DIR);
-// }
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Multer setup for file uploads - now handled in auth.js
-// const storage = multer.diskStorage({
-//   destination: (req, file, cb) => {
-//     cb(null, UPLOADS_DIR);
-//   },
-//   filename: (req, file, cb) => {
-//     cb(null, `${file.fieldname}-${Date.now()}${path.extname(file.originalname)}`);
-//   },
-// });
-
-// const upload = multer({ storage });
-
-// Middleware
-app.use('/uploads', express.static(UPLOADS_DIR)); // Serve static files from uploads directory
-const objectSearchRoute = require("./routes/objectSearch");
-app.use("/api", objectSearchRoute);
-// Use Auth Routes
-app.use('/api', authRoutes); // All auth routes will be prefixed with /api
-
-const attendeeRoutes = require('./routes/attendee'); // Import attendee routes
-app.use('/api', attendeeRoutes); // All attendee routes will be prefixed with /api
-
-const adminRoutes = require('./routes/admin'); // Import admin routes
-app.use('/api', adminRoutes); // All admin routes will be prefixed with /api
-
-const volunteerRoutes = require('./routes/volunteer'); // Import volunteer routes
-app.use('/api', volunteerRoutes); // All volunteer routes will be prefixed with /api
-
+app.use('/api', require('./routes/persondetection'));
+app.use('/api', require('./routes/aiSummary'));
+app.use('/api', require('./routes/objectSearch'));
+app.use('/api', require('./routes/auth'));
+app.use('/api', require('./routes/attendee'));
+app.use('/api', require('./routes/admin'));
+app.use('/api', require('./routes/volunteer'));
 app.use('/api', require('./routes/faceLogin'));
 app.use('/api', require('./routes/volunteerRegister'));
 
 // Make io available to our routers
 app.set('io', io);
 
-// Start server
 server.listen(PORT, () => console.log(`Server started on port ${PORT}`));

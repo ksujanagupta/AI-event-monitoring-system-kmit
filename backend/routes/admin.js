@@ -4,17 +4,14 @@ const User = require('../models/User');
 const Issue = require('../models/Issue');
 const path = require('path');
 const fs = require('fs');
+const { requireRole } = require('../middleware/auth');
+
+const adminOnly = requireRole('admin');
 
 // Admin route to approve a user
-router.put('/admin/approve-user/:id', async (req, res) => {
+router.put('/admin/approve-user/:id', adminOnly, async (req, res) => {
   try {
     const { id } = req.params;
-    const { adminName } = req.body;
-
-    const adminUser = await User.findOne({ name: adminName, role: 'admin' });
-    if (!adminUser) {
-      return res.status(403).json({ msg: 'Forbidden: Only admins can approve users.' });
-    }
 
     const user = await User.findByIdAndUpdate(id, { isApproved: true }, { new: true });
 
@@ -30,14 +27,9 @@ router.put('/admin/approve-user/:id', async (req, res) => {
 });
 
 // Admin route to get all users
-router.get('/admin/users', async (req, res) => {
+router.get('/admin/users', adminOnly, async (req, res) => {
   try {
-    const { adminName, role } = req.query;
-
-    const adminUser = await User.findOne({ name: adminName, role: 'admin' });
-    if (!adminUser) {
-      return res.status(403).json({ msg: 'Forbidden: Only admins can view users.' });
-    }
+    const { role } = req.query;
 
     let query = {};
     if (role) {
@@ -53,15 +45,9 @@ router.get('/admin/users', async (req, res) => {
 });
 
 // Admin route to delete a user
-router.delete('/admin/users/:id', async (req, res) => {
+router.delete('/admin/users/:id', adminOnly, async (req, res) => {
   try {
     const { id } = req.params;
-    const { adminName } = req.query;
-
-    const adminUser = await User.findOne({ name: adminName, role: 'admin' });
-    if (!adminUser) {
-      return res.status(403).json({ msg: 'Forbidden: Only admins can delete users.' });
-    }
 
     const user = await User.findByIdAndDelete(id);
 
@@ -86,15 +72,9 @@ router.delete('/admin/users/:id', async (req, res) => {
 });
 
 // Admin route to delete an issue
-router.delete('/admin/issues/:id', async (req, res) => {
+router.delete('/admin/issues/:id', adminOnly, async (req, res) => {
   try {
     const { id } = req.params;
-    const { adminName } = req.query;
-
-    const adminUser = await User.findOne({ name: adminName, role: 'admin' });
-    if (!adminUser) {
-      return res.status(403).json({ msg: 'Forbidden: Only admins can delete issues.' });
-    }
 
     const issue = await Issue.findByIdAndDelete(id);
 
@@ -112,22 +92,9 @@ router.delete('/admin/issues/:id', async (req, res) => {
 });
 
 // Admin route to get all issues
-router.get('/admin/issues', async (req, res) => {
+router.get('/admin/issues', adminOnly, async (req, res) => {
   try {
-    const { adminName, role } = req.query;
-
-    const adminUser = await User.findOne({ name: adminName, role: 'admin' });
-    if (!adminUser) {
-      return res.status(403).json({ msg: 'Forbidden: Only admins can view issues.' });
-    }
-
-    let query = {};
-    if (role) {
-      query.role = role;
-    }
-
-    const issues = await Issue.find(query).populate('reportedBy', 'name').populate('assignedTo', 'name');
-    console.log('Fetched issues from backend:', issues.map(i => ({ _id: i._id, location: i.location, status: i.status })));
+    const issues = await Issue.find().populate('reportedBy', 'name').populate('assignedTo', 'name');
     res.json(issues);
   } catch (err) {
     console.error(err.message);
@@ -136,15 +103,9 @@ router.get('/admin/issues', async (req, res) => {
 });
 
 // Admin route to mark an issue as resolved
-router.put('/admin/issues/:id/resolve', async (req, res) => {
+router.put('/admin/issues/:id/resolve', adminOnly, async (req, res) => {
   try {
     const { id } = req.params;
-    const { adminName } = req.query;
-
-    const adminUser = await User.findOne({ name: adminName, role: 'admin' });
-    if (!adminUser) {
-      return res.status(403).json({ msg: 'Forbidden: Only admins can resolve issues.' });
-    }
 
     const issue = await Issue.findByIdAndUpdate(id, { status: 'resolved' }, { new: true });
 
@@ -160,19 +121,14 @@ router.put('/admin/issues/:id/resolve', async (req, res) => {
 });
 
 // Admin route to create a new alert
-router.post('/admin/alerts', async (req, res) => {
+router.post('/admin/alerts', adminOnly, async (req, res) => {
   try {
-    const { adminName, title, message, severity, location, audience } = req.body;
-
-    const adminUser = await User.findOne({ name: adminName, role: 'admin' });
-    if (!adminUser) {
-      return res.status(403).json({ msg: 'Forbidden: Only admins can create alerts.' });
-    }
+    const { title, message, severity, audience } = req.body;
 
     const defaultLocation = { latitude: 17.3850, longitude: 78.4867 };
 
     const newAlert = new Issue({
-      reportedBy: adminUser._id,
+      reportedBy: req.user.id,
       description: `${title}: ${message}`,
       location: defaultLocation,
       status: 'reported',
@@ -183,7 +139,7 @@ router.post('/admin/alerts', async (req, res) => {
 
     await newAlert.save();
 
-    req.app.get('io').emit('newIssueAlert', { issue: newAlert, reporterName: adminUser.name });
+    req.app.get('io').emit('newIssueAlert', { issue: newAlert, reporterName: req.user.name });
 
     res.status(201).json({ msg: 'Alert created successfully', alert: newAlert });
   } catch (err) {
@@ -193,15 +149,8 @@ router.post('/admin/alerts', async (req, res) => {
 });
 
 // Admin route to get all approved volunteers
-router.get('/admin/volunteers', async (req, res) => {
+router.get('/admin/volunteers', adminOnly, async (req, res) => {
   try {
-    const { adminName } = req.query;
-
-    const adminUser = await User.findOne({ name: adminName, role: 'admin' });
-    if (!adminUser) {
-      return res.status(403).json({ msg: 'Forbidden: Only admins can view volunteers.' });
-    }
-
     const volunteers = await User.find({ role: 'volunteer', isApproved: true }).select('-password');
     res.json(volunteers);
   } catch (err) {
@@ -211,14 +160,13 @@ router.get('/admin/volunteers', async (req, res) => {
 });
 
 // Admin route to assign a volunteer to an issue
-router.put('/admin/issues/:issueId/assign', async (req, res) => {
+router.put('/admin/issues/:issueId/assign', adminOnly, async (req, res) => {
   try {
     const { issueId } = req.params;
-    const { volunteerIds, adminName } = req.body;
+    const { volunteerIds } = req.body;
 
-    const adminUser = await User.findOne({ name: adminName, role: 'admin' });
-    if (!adminUser) {
-      return res.status(403).json({ msg: 'Forbidden: Only admins can assign volunteers.' });
+    if (!Array.isArray(volunteerIds) || volunteerIds.length === 0) {
+      return res.status(400).json({ msg: 'volunteerIds must be a non-empty array.' });
     }
 
     const volunteers = await User.find({ _id: { $in: volunteerIds }, role: 'volunteer', isApproved: true });
@@ -248,30 +196,12 @@ router.put('/admin/issues/:issueId/assign', async (req, res) => {
 });
 
 // Admin route for 24-Hour Activity Summary (alerts reported vs. resolved)
-router.get('/admin/activity-summary', async (req, res) => {
+router.get('/admin/activity-summary', adminOnly, async (req, res) => {
   try {
-    const { adminName } = req.query;
-
-    const adminUser = await User.findOne({ name: adminName, role: 'admin' });
-    if (!adminUser) {
-      return res.status(403).json({ msg: 'Forbidden: Only admins can view activity summary.' });
-    }
-
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
     const activity = await Issue.aggregate([
       { $match: { timestamp: { $gte: twentyFourHoursAgo } } },
-      { $addFields: {
-        assignedToArray: { $cond: [
-          { $isArray: "$assignedTo" },
-          "$assignedTo",
-          { $cond: [
-            { $ne: ["$assignedTo", null] },
-            ["$assignedTo"],
-            []
-          ]}
-        ]}
-      }},
       { $project: {
         hour: { $hour: { date: "$timestamp", timezone: "+05:30" } },
         status: 1,
@@ -306,17 +236,8 @@ router.get('/admin/activity-summary', async (req, res) => {
 });
 
 // Admin route for Top Volunteers (by resolved issues)
-router.get('/admin/top-volunteers', async (req, res) => {
+router.get('/admin/top-volunteers', adminOnly, async (req, res) => {
   try {
-    const { adminName } = req.query;
-
-    const adminUser = await User.findOne({ name: adminName, role: 'admin' });
-    if (!adminUser) {
-      return res.status(403).json({ msg: 'Forbidden: Only admins can view top volunteers.' });
-    }
-
-    const allApprovedVolunteers = await User.find({ role: 'volunteer', isApproved: true });
-
     const topVolunteers = await User.aggregate([
       { $match: { role: 'volunteer', isApproved: true } },
       { $lookup: {
@@ -360,20 +281,12 @@ router.get('/admin/top-volunteers', async (req, res) => {
   }
 });
 
-// Admin route to get all approved volunteer locations
-router.get('/admin/volunteer-locations', async (req, res) => {
+// Approved volunteer locations (admin map + volunteer geo-location page)
+router.get('/admin/volunteer-locations', requireRole('admin', 'volunteer'), async (req, res) => {
   try {
-    const { adminName } = req.query;
-
-    const adminUser = await User.findOne({ name: adminName, role: 'admin' });
-    if (!adminUser) {
-      return res.status(403).json({ msg: 'Forbidden: Only admins can view volunteer locations.' });
-    }
-
     const volunteerLocations = await User.find({ role: 'volunteer', isApproved: true, 'lastKnownLocation.latitude': { $exists: true } })
       .select('name lastKnownLocation status');
 
-    console.log('Fetched volunteer locations from backend:', volunteerLocations.map(v => ({ _id: v._id, lastKnownLocation: v.lastKnownLocation, status: v.status })));
     res.json(volunteerLocations);
   } catch (err) {
     console.error(err.message);
@@ -382,15 +295,9 @@ router.get('/admin/volunteer-locations', async (req, res) => {
 });
 
 // Admin route to broadcast an existing alert to attendees
-router.post('/admin/issues/:issueId/broadcast-to-attendees', async (req, res) => {
+router.post('/admin/issues/:issueId/broadcast-to-attendees', adminOnly, async (req, res) => {
   try {
     const { issueId } = req.params;
-    const { adminName } = req.body;
-
-    const adminUser = await User.findOne({ name: adminName, role: 'admin' });
-    if (!adminUser) {
-      return res.status(403).json({ msg: 'Forbidden: Only admins can broadcast alerts.' });
-    }
 
     const issue = await Issue.findById(issueId).populate('reportedBy', 'name');
     if (!issue) {
@@ -412,4 +319,3 @@ router.post('/admin/issues/:issueId/broadcast-to-attendees', async (req, res) =>
 });
 
 module.exports = router;
-

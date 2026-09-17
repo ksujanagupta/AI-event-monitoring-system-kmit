@@ -4,7 +4,8 @@ import { MapContainer, TileLayer, Marker, Popup, Circle, CircleMarker } from 're
 import { BellIcon, CheckIcon, XIcon, UserIcon, ClockIcon, MapPinIcon, EyeIcon, PlusIcon, SendIcon, ArrowLeftIcon } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet'; // Import Leaflet library
-import { io, Socket } from 'socket.io-client';
+import { Socket } from 'socket.io-client';
+import { apiFetch, connectSocket } from '../../api';
 
 // Fix for default marker icon not appearing (common issue with react-leaflet)
 // This ensures Leaflet can find its default marker images
@@ -53,11 +54,10 @@ export function AdminAlerts() {
     location: '',
     audience: 'both' as 'volunteers' | 'attendees' | 'both'
   });
-  const adminName = "sujana"; // Replace with actual admin name from context
 
   // Socket.IO connection
   useEffect(() => {
-    const socket: Socket = io('http://localhost:5000'); // Connect to your backend Socket.IO server
+    const socket: Socket = connectSocket();
 
     socket.on('connect', () => {
       console.log('Connected to Socket.IO server');
@@ -100,7 +100,7 @@ export function AdminAlerts() {
   useEffect(() => {
     const fetchIssues = async () => {
       try {
-        const response = await fetch(`http://localhost:5000/api/admin/issues?adminName=${adminName}`);
+        const response = await apiFetch(`/api/admin/issues`);
         const data = await response.json();
         if (response.ok) {
           console.log('Fetched issues:', data); // Add this log
@@ -114,12 +114,12 @@ export function AdminAlerts() {
       }
     };
     fetchIssues();
-  }, [adminName]);
+  }, []);
 
   // Function to fetch volunteer locations
   const fetchVolunteerLocations = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/admin/volunteer-locations?adminName=${adminName}`);
+      const response = await apiFetch(`/api/admin/volunteer-locations`);
       if (response.ok) {
         const data: VolunteerData[] = await response.json();
         console.log('Fetched volunteer locations:', data); // Add this log
@@ -146,8 +146,7 @@ export function AdminAlerts() {
   // Fetch volunteers on component mount and on issue updates
   useEffect(() => {
     fetchVolunteerLocations();
-    // The dependency array should include adminName if it can change
-  }, [adminName]);
+  }, []);
 
   console.log('Current alerts state:', alerts); // Add this log
   console.log('Current adminVolunteers state:', adminVolunteers); // Add this log
@@ -176,12 +175,12 @@ export function AdminAlerts() {
     const volunteerIds = selectedVolunteers; 
 
     try {
-      const response = await fetch(`http://localhost:5000/api/admin/issues/${alertToAssign}/assign`, {
+      const response = await apiFetch(`/api/admin/issues/${alertToAssign}/assign`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ volunteerIds, adminName }),
+        body: JSON.stringify({ volunteerIds }),
       });
       const data = await response.json();
 
@@ -206,7 +205,7 @@ export function AdminAlerts() {
     }
     try {
       // For rejection, we'll delete the issue for now.
-      const response = await fetch(`http://localhost:5000/api/admin/issues/${alertId}?adminName=${adminName}`, {
+      const response = await apiFetch(`/api/admin/issues/${alertId}`, {
         method: 'DELETE',
       });
       const data = await response.json();
@@ -227,7 +226,7 @@ export function AdminAlerts() {
       return;
     }
     try {
-      const response = await fetch(`http://localhost:5000/api/admin/issues/${alertId}/resolve?adminName=${adminName}`, {
+      const response = await apiFetch(`/api/admin/issues/${alertId}/resolve`, {
         method: 'PUT',
       });
       const data = await response.json();
@@ -255,12 +254,12 @@ export function AdminAlerts() {
     }
 
     try {
-      const response = await fetch(`http://localhost:5000/api/admin/alerts`, {
+      const response = await apiFetch(`/api/admin/alerts`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ ...newAlertForm, adminName }),
+        body: JSON.stringify(newAlertForm),
       });
       const data = await response.json();
 
@@ -498,12 +497,11 @@ export function AdminAlerts() {
                         // This button is for broadcasting to attendees
                         // Assuming a backend endpoint exists for this
                         if (window.confirm('Are you sure you want to broadcast this alert to all attendees?')) {
-                          fetch(`http://localhost:5000/api/admin/issues/${alert._id}/broadcast-to-attendees`, {
+                          apiFetch(`/api/admin/issues/${alert._id}/broadcast-to-attendees`, {
                             method: 'POST',
                             headers: {
                               'Content-Type': 'application/json',
                             },
-                            body: JSON.stringify({ adminName }), // Send adminName in the body
                           })
                           .then(async response => { // Mark this as async to await json()
                             console.log('Broadcast response status:', response.status); // Log response status
@@ -559,12 +557,11 @@ export function AdminAlerts() {
                         // This button is for broadcasting to attendees
                         // Assuming a backend endpoint exists for this
                         if (window.confirm('Are you sure you want to broadcast this alert to all attendees?')) {
-                          fetch(`http://localhost:5000/api/admin/issues/${alert._id}/broadcast-to-attendees`, {
+                          apiFetch(`/api/admin/issues/${alert._id}/broadcast-to-attendees`, {
                             method: 'POST',
                             headers: {
                               'Content-Type': 'application/json',
                             },
-                            body: JSON.stringify({ adminName }), // Send adminName in the body
                           })
                           .then(async response => { // Mark this as async to await json()
                             console.log('Broadcast response status:', response.status); // Log response status

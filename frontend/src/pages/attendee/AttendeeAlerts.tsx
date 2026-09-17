@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BellIcon, ClockIcon, MapPinIcon } from 'lucide-react';
-import { io, Socket } from 'socket.io-client';
+import { Socket } from 'socket.io-client';
+import { apiFetch, connectSocket } from '../../api';
 
 interface IssueData {
   _id: string;
@@ -25,7 +26,7 @@ export function AttendeeAlerts() {
   }, []);
 
   useEffect(() => {
-    const socket: Socket = io('http://localhost:5000');
+    const socket: Socket = connectSocket();
 
     socket.on('connect', () => {
       console.log('Connected to Socket.IO server for Attendee Alerts');
@@ -88,7 +89,7 @@ export function AttendeeAlerts() {
     if (!userId) return; // Wait for userId to be available
 
     try {
-      const response = await fetch(`http://localhost:5000/api/attendee/alerts?attendeeId=${userId}`);
+      const response = await apiFetch(`/api/attendee/alerts`);
       const data = await response.json();
 
       if (response.ok) {

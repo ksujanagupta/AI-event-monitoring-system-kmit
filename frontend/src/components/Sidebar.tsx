@@ -106,7 +106,7 @@ export function Sidebar({
         </nav>
         {/* Logout */}
         <div className="absolute bottom-0 w-full p-4 border-t border-slate-700">
-          <button onClick={() => navigate('/login')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-all ${collapsed ? 'justify-center' : ''}`} title={collapsed ? 'Logout' : ''}>
+          <button onClick={() => { localStorage.clear(); navigate('/login'); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-all ${collapsed ? 'justify-center' : ''}`} title={collapsed ? 'Logout' : ''}>
             <LogOutIcon className="w-5 h-5 flex-shrink-0" />
             {!collapsed && <span>Logout</span>}
           </button>

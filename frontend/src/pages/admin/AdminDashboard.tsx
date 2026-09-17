@@ -9,6 +9,8 @@ import { AdminAISummary } from './AdminAISummary';
 import { AdminLostFound } from './AdminLostFound';
 export function AdminDashboard() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  // Navigation only; the backend enforces roles on every request
+  if (localStorage.getItem('userRole') !== 'admin' || !localStorage.getItem('token')) return <Navigate to="/login" replace />;
   return <div className="min-h-screen w-full bg-slate-950 flex">
       <Sidebar role="admin" onCollapsedChange={setSidebarCollapsed} />
       <div className={`flex-1 transition-all duration-300 ${sidebarCollapsed ? 'ml-20' : 'ml-64'}`}>

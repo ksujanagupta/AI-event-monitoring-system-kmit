@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
+const { signToken } = require('../middleware/auth');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -84,7 +85,7 @@ router.post('/login', async (req, res) => {
       console.log('Volunteer lastKnownLocation updated to:', user.lastKnownLocation);
     }
 
-    res.json({ msg: 'Logged in successfully', role: user.role, userId: user._id });
+    res.json({ msg: 'Logged in successfully', role: user.role, userId: user._id, token: signToken(user) });
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server error');

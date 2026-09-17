@@ -4,7 +4,10 @@ const multer = require("multer");
 const FormData = require("form-data");
 const fs = require("fs");
 
+const { requireRole } = require("../middleware/auth");
+
 const router = express.Router();
+const staff = requireRole("admin", "volunteer");
 const upload = multer({ dest: "uploads/" });
 
 /**
@@ -14,6 +17,7 @@ const upload = multer({ dest: "uploads/" });
  */
 router.post(
   "/search-face",
+  staff,
   upload.fields([
     { name: "query", maxCount: 1 },
     { name: "video", maxCount: 1 }
@@ -104,6 +108,7 @@ router.post(
  */
 router.post(
   "/search-face-multiple",
+  staff,
   upload.single("query"),
   async (req, res) => {
     console.log("\n=== FACE SEARCH MULTIPLE REQUEST RECEIVED ===");

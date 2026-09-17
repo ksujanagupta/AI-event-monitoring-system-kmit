@@ -5,6 +5,7 @@ const router = express.Router();
 const path = require('path');
 const fs = require('fs');
 const { GoogleGenAI } = require('@google/genai');
+const { requireRole } = require('../middleware/auth');
 
 // NOTE: It is assumed that dotenv.config() is called in your index.js
 const apiKey = process.env.GEMINI_API_KEY;
@@ -60,7 +61,7 @@ LOG_CONTEXT = loadLogData();
 
 
 // --- 2. Chatbot API Endpoint ---
-router.post('/summary/chat', async (req, res) => {
+router.post('/summary/chat', requireRole('admin'), async (req, res) => {
     if (!ai) {
         return res.status(503).json({ error: "AI Service is unavailable. Check API Key." });
     }

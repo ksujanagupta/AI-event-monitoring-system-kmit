@@ -7,6 +7,8 @@ import { VolunteerLocation } from './VolunteerLocation';
 import { VolunteerLostFound } from './VolunteerLostFound';
 export function VolunteerDashboard() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  // Navigation only; the backend enforces roles on every request
+  if (localStorage.getItem('userRole') !== 'volunteer' || !localStorage.getItem('token')) return <Navigate to="/login" replace />;
   return <div className="min-h-screen w-full bg-slate-950 flex">
       <Sidebar role="volunteer" onCollapsedChange={setSidebarCollapsed} />
       <div className={`flex-1 transition-all duration-300 ${sidebarCollapsed ? 'ml-20' : 'ml-64'}`}>

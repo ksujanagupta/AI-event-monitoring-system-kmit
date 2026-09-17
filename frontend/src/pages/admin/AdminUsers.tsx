@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { API, apiFetch } from '../../api';
 import { SearchIcon, CheckIcon, XIcon, UserIcon, MailIcon, PhoneIcon, FilterIcon, ArrowLeftIcon, Trash2Icon } from 'lucide-react';
 interface UserData {
   _id: string;
@@ -17,11 +18,10 @@ export function AdminUsers() {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
   const [users, setUsers] = useState<UserData[]>([]);
-  const adminName = "sujana"; // This should ideally come from authenticated user context
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/admin/users?adminName=${adminName}`);
+      const response = await apiFetch(`/api/admin/users`);
       const data = await response.json();
       if (response.ok) {
         setUsers(data);
@@ -40,12 +40,11 @@ export function AdminUsers() {
 
   const handleApproveUser = async (id: string) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/admin/approve-user/${id}`, {
+      const response = await apiFetch(`/api/admin/approve-user/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ adminName }),
       });
       const data = await response.json();
       if (response.ok) {
@@ -67,7 +66,7 @@ export function AdminUsers() {
     try {
       // For rejection, we might want to delete the user or set a 'rejected' status.
       // For now, I'll implement a delete.
-      const response = await fetch(`http://localhost:5000/api/admin/users/${id}?adminName=${adminName}`, {
+      const response = await apiFetch(`/api/admin/users/${id}`, {
         method: 'DELETE',
       });
       const data = await response.json();
@@ -88,7 +87,7 @@ export function AdminUsers() {
       return;
     }
     try {
-      const response = await fetch(`http://localhost:5000/api/admin/users/${id}?adminName=${adminName}`, {
+      const response = await apiFetch(`/api/admin/users/${id}`, {
         method: 'DELETE',
       });
       const data = await response.json();
@@ -213,7 +212,7 @@ export function AdminUsers() {
                       <div className="flex items-center gap-4">
                         {user.imagePath ? (
                           <img
-                            src={`http://localhost:5000${user.imagePath}`}
+                            src={`${API}${user.imagePath}`}
                             alt={user.name}
                             className="w-12 h-12 rounded-full object-cover"
                           />
@@ -299,7 +298,7 @@ export function AdminUsers() {
                         <div className="flex items-center gap-3">
                           {user.imagePath ? (
                             <img
-                              src={`http://localhost:5000${user.imagePath}`}
+                              src={`${API}${user.imagePath}`}
                               alt={user.name}
                               className="w-8 h-8 rounded-full object-cover"
                             />
@@ -469,7 +468,7 @@ export function AdminUsers() {
               <div className="flex justify-center">
                 {selectedUser.imagePath ? (
                   <img
-                    src={`http://localhost:5000${selectedUser.imagePath}`}
+                    src={`${API}${selectedUser.imagePath}`}
                     alt={selectedUser.name}
                     className="w-32 h-32 rounded-full object-cover border-4 border-slate-700"
                   />
