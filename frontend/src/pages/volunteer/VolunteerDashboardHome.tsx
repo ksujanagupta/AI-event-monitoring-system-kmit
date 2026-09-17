@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircleIcon, ClockIcon, AlertTriangleIcon, TrendingUpIcon, ArrowLeftIcon, XIcon, UsersIcon } from 'lucide-react';
-import { io, Socket } from 'socket.io-client';
+import { Socket } from 'socket.io-client';
+import { apiFetch, connectSocket } from '../../api';
 
 interface IssueData {
   _id: string;
@@ -35,7 +36,7 @@ export function VolunteerDashboardHome() {
 
   // Socket.IO connection for real-time updates
   useEffect(() => {
-    const socket: Socket = io('http://localhost:5000');
+    const socket: Socket = connectSocket();
 
     socket.on('connect', () => {
       console.log('Connected to Socket.IO server from volunteer dashboard');
@@ -90,7 +91,7 @@ export function VolunteerDashboardHome() {
     const fetchAssignedAndResolvedIssues = async () => {
       if (!userId) return; // Don't fetch if userId is not available yet
       try {
-        const response = await fetch(`http://localhost:5000/api/volunteer/assigned-issues?volunteerId=${userId}`);
+        const response = await apiFetch(`/api/volunteer/assigned-issues`);
         const data = await response.json();
         if (response.ok) {
           setAssignedIssues(data.filter(issue => issue.assignedTo?.some(assigned => assigned._id === userId) && issue.status !== 'resolved')); // Filter for issues assigned to current volunteer
@@ -145,12 +146,12 @@ export function VolunteerDashboardHome() {
     }
 
     try {
-      const response = await fetch(`http://localhost:5000/api/volunteer/issues/${issueId}/accept`, {
+      const response = await apiFetch(`/api/volunteer/issues/${issueId}/accept`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ volunteerId: userId, needBackup: false }), // When initially accepting, no backup is needed yet
+        body: JSON.stringify({ needBackup: false }), // When initially accepting, no backup is needed yet
       });
       const data = await response.json();
       if (response.ok) {
@@ -173,12 +174,12 @@ export function VolunteerDashboardHome() {
       return;
     }
     try {
-      const response = await fetch(`http://localhost:5000/api/volunteer/issues/${selectedAssignmentId}/accept`, {
+      const response = await apiFetch(`/api/volunteer/issues/${selectedAssignmentId}/accept`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ volunteerId: userId, needBackup }),
+        body: JSON.stringify({ needBackup }),
       });
       const data = await response.json();
       if (response.ok) {
@@ -205,12 +206,12 @@ export function VolunteerDashboardHome() {
       return;
     }
     try {
-      const response = await fetch(`http://localhost:5000/api/volunteer/issues/${issueId}/resolve`, {
+      const response = await apiFetch(`/api/volunteer/issues/${issueId}/resolve`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ volunteerId: userId }),
+        body: JSON.stringify({}),
       });
       const data = await response.json();
       if (response.ok) {
@@ -231,12 +232,12 @@ export function VolunteerDashboardHome() {
       return;
     }
     try {
-      const response = await fetch(`http://localhost:5000/api/volunteer/issues/${issueId}/ask-for-backup`, {
+      const response = await apiFetch(`/api/volunteer/issues/${issueId}/ask-for-backup`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ volunteerId: userId }),
+        body: JSON.stringify({}),
       });
       const data = await response.json();
       if (response.ok) {
@@ -257,12 +258,12 @@ export function VolunteerDashboardHome() {
       return;
     }
     try {
-      const response = await fetch(`http://localhost:5000/api/volunteer/issues/${issueId}/take-backup`, {
+      const response = await apiFetch(`/api/volunteer/issues/${issueId}/take-backup`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ newVolunteerId: userId }),
+        body: JSON.stringify({}),
       });
       const data = await response.json();
       if (response.ok) {

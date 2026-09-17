@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { apiFetch } from '../../api';
 import { UsersIcon, AlertTriangleIcon, CheckCircleIcon, ActivityIcon, TrendingUpIcon, ClockIcon, ArrowLeftIcon } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
@@ -41,23 +42,22 @@ export function AdminDashboardHome() {
   const [recentAlerts, setRecentAlerts] = useState<IssueData[]>([]);
   const [activityData, setActivityData] = useState<ActivityData[]>([]); // New state for activity chart data
   const [topVolunteersData, setTopVolunteersData] = useState<TopVolunteerData[]>([]); // New state for top volunteers chart data
-  const adminName = "sujana"; // Replace with actual admin name from context or local storage
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         // Fetch Total Volunteers (using dedicated endpoint)
-        const volunteersResponse = await fetch(`http://localhost:5000/api/admin/volunteers?adminName=${adminName}`);
+        const volunteersResponse = await apiFetch(`/api/admin/volunteers`);
         const volunteersData: UserData[] = await volunteersResponse.json();
         setTotalVolunteers(volunteersData.length); // The endpoint already returns only approved volunteers
 
         // Fetch Total Attendees
-        const attendeesResponse = await fetch(`http://localhost:5000/api/admin/users?adminName=${adminName}&role=attendee`);
+        const attendeesResponse = await apiFetch(`/api/admin/users?role=attendee`);
         const attendeesData: UserData[] = await attendeesResponse.json();
         setTotalAttendees(attendeesData.length);
 
         // Fetch Issues for Active Alerts and Resolved Issues
-        const issuesResponse = await fetch(`http://localhost:5000/api/admin/issues?adminName=${adminName}`);
+        const issuesResponse = await apiFetch(`/api/admin/issues`);
         const issuesData: IssueData[] = await issuesResponse.json();
         setActiveAlerts(issuesData.filter(issue => issue.status === 'reported' || issue.status === 'in-progress').length);
         setResolvedIssues(issuesData.filter(issue => issue.status === 'resolved').length);
@@ -66,12 +66,12 @@ export function AdminDashboardHome() {
         setRecentAlerts(issuesData.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 5));
 
         // Fetch 24-Hour Activity Data
-        const activityResponse = await fetch(`http://localhost:5000/api/admin/activity-summary?adminName=${adminName}`);
+        const activityResponse = await apiFetch(`/api/admin/activity-summary`);
         const activitySummaryData: ActivityData[] = await activityResponse.json();
         setActivityData(activitySummaryData);
 
         // Fetch Top Volunteers Data
-        const topVolunteersResponse = await fetch(`http://localhost:5000/api/admin/top-volunteers?adminName=${adminName}`);
+        const topVolunteersResponse = await apiFetch(`/api/admin/top-volunteers`);
         const topVolunteersData: TopVolunteerData[] = await topVolunteersResponse.json();
         setTopVolunteersData(topVolunteersData);
 
@@ -81,7 +81,7 @@ export function AdminDashboardHome() {
     };
 
     fetchDashboardData();
-  }, [adminName]);
+  }, []);
 
   const stats = [
     {

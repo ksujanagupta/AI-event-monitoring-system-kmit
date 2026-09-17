@@ -1,44 +1,77 @@
-import React, { Fragment } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Fragment, useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Circle } from 'react-leaflet';
-import { MapPinIcon, NavigationIcon, AlertTriangleIcon, ArrowLeftIcon } from 'lucide-react';
+import { MapPinIcon, NavigationIcon, AlertTriangleIcon } from 'lucide-react';
+import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { apiFetch } from '../../api';
+import { VENUE_CENTER, formatDistance } from '../../config';
+type Issue = {
+  _id: string;
+  description: string;
+  severity?: string;
+  location: { latitude: number; longitude: number };
+};
+type Volunteer = {
+  _id: string;
+  name: string;
+  status: string;
+  lastKnownLocation: { latitude: number; longitude: number };
+};
+const LOCATION_SEND_INTERVAL_MS = 15000; // don't hit the API on every GPS update
 export function VolunteerLocation() {
-  const navigate = useNavigate();
-  const myLocation = {
-    lat: 40.7128,
-    lng: -74.006
-  };
-  const nearbyAlerts = [{
-    id: 1,
-    type: 'Medical Emergency',
-    lat: 40.7138,
-    lng: -74.007,
-    distance: '0.2 km',
-    priority: 'critical'
-  }, {
-    id: 2,
-    type: 'Lost Child',
-    lat: 40.7118,
-    lng: -74.005,
-    distance: '0.5 km',
-    priority: 'high'
-  }];
-  const otherVolunteers = [{
-    id: 1,
-    name: 'John D.',
-    lat: 40.7125,
-    lng: -74.0055,
-    status: 'available'
-  }, {
-    id: 2,
-    name: 'Jane S.',
-    lat: 40.7145,
-    lng: -74.0075,
-    status: 'busy'
-  }];
+  const [myLocation, setMyLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [assignedIssues, setAssignedIssues] = useState<Issue[]>([]);
+  const [volunteers, setVolunteers] = useState<Volunteer[]>([]);
+  // Share this volunteer's position with the admin map while the page is open
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      setLocationError('Geolocation is not supported by your browser.');
+      return;
+    }
+    let lastSent = 0;
+    const watchId = navigator.geolocation.watchPosition(pos => {
+      const { latitude, longitude, accuracy } = pos.coords;
+      setMyLocation({ lat: latitude, lng: longitude });
+      setLocationError(null);
+      if (Date.now() - lastSent > LOCATION_SEND_INTERVAL_MS) {
+        lastSent = Date.now();
+        apiFetch('/api/volunteer/location', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ latitude, longitude, accuracy })
+        }).catch(console.error);
+      }
+    }, err => setLocationError(err.message), { enableHighAccuracy: true });
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, []);
+  useEffect(() => {
+    const load = async (path: string) => {
+      const res = await apiFetch(path);
+      return res.ok ? res.json() : [];
+    };
+    load('/api/volunteer/assigned-issues').then(setAssignedIssues).catch(console.error);
+    load('/api/admin/volunteer-locations').then(setVolunteers).catch(console.error);
+  }, []);
+  const myId = localStorage.getItem('userId');
+  const otherVolunteers = volunteers.filter(v => v._id !== myId).map(v => ({
+    id: v._id,
+    name: v.name,
+    status: v.status,
+    lat: v.lastKnownLocation.latitude,
+    lng: v.lastKnownLocation.longitude
+  }));
+  const nearbyAlerts = assignedIssues.map(issue => ({
+    id: issue._id,
+    type: issue.description,
+    lat: issue.location.latitude,
+    lng: issue.location.longitude,
+    distance: myLocation ? formatDistance(L.latLng(myLocation.lat, myLocation.lng).distanceTo([issue.location.latitude, issue.location.longitude])) : 'Unknown distance',
+    priority: issue.severity || 'medium'
+  }));
   const handleNavigate = (lat: number, lng: number) => {
-    const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${myLocation.lat},${myLocation.lng}&destination=${lat},${lng}&travelmode=walking`;
+    const origin = myLocation ? `&origin=${myLocation.lat},${myLocation.lng}` : '';
+    const googleMapsUrl = `https://www.google.com/maps/dir/?api=1${origin}&destination=${lat},${lng}&travelmode=walking`;
     window.open(googleMapsUrl, '_blank');
   };
   return <div className="p-6 space-y-6">
@@ -48,16 +81,18 @@ export function VolunteerLocation() {
           Geo-Location Tracking
         </h1>
         <p className="text-slate-400">
-          Your current location and nearby alerts
+          Your current location and assigned alerts
         </p>
       </div>
       {/* Location Status */}
-      <div className="bg-green-900/20 border border-green-800 rounded-xl p-4 flex items-center gap-3">
-        <MapPinIcon className="w-6 h-6 text-green-400" />
+      <div className={`rounded-xl p-4 flex items-center gap-3 border ${myLocation ? 'bg-green-900/20 border-green-800' : 'bg-yellow-900/20 border-yellow-800'}`}>
+        <MapPinIcon className={`w-6 h-6 ${myLocation ? 'text-green-400' : 'text-yellow-400'}`} />
         <div>
-          <p className="text-white font-medium">Location Tracking Active</p>
+          <p className="text-white font-medium">
+            {myLocation ? 'Location Tracking Active' : 'Waiting for your location'}
+          </p>
           <p className="text-slate-400 text-sm">
-            Your location is being shared with the admin team
+            {myLocation ? 'Your location is being shared with the admin team' : locationError || 'Allow location access in your browser'}
           </p>
         </div>
       </div>
@@ -65,25 +100,27 @@ export function VolunteerLocation() {
       <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden" style={{
       height: '500px'
     }}>
-        <MapContainer center={[myLocation.lat, myLocation.lng]} zoom={15} style={{
+        <MapContainer center={VENUE_CENTER} zoom={15} style={{
         height: '100%',
         width: '100%'
       }} className="z-0">
           <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' />
           {/* My Location */}
-          <Marker position={[myLocation.lat, myLocation.lng]}>
-            <Popup>
-              <div className="p-2">
-                <p className="font-bold">Your Location</p>
-                <p className="text-sm">Currently Active</p>
-              </div>
-            </Popup>
-          </Marker>
-          <Circle center={[myLocation.lat, myLocation.lng]} radius={50} pathOptions={{
-          color: 'green',
-          fillColor: 'green',
-          fillOpacity: 0.2
-        }} />
+          {myLocation && <Fragment>
+              <Marker position={[myLocation.lat, myLocation.lng]}>
+                <Popup>
+                  <div className="p-2">
+                    <p className="font-bold">Your Location</p>
+                    <p className="text-sm">Currently Active</p>
+                  </div>
+                </Popup>
+              </Marker>
+              <Circle center={[myLocation.lat, myLocation.lng]} radius={50} pathOptions={{
+            color: 'green',
+            fillColor: 'green',
+            fillOpacity: 0.2
+          }} />
+            </Fragment>}
           {/* Nearby Alerts */}
           {nearbyAlerts.map(alert => <Fragment key={alert.id}>
               <Marker position={[alert.lat, alert.lng]}>
@@ -113,8 +150,9 @@ export function VolunteerLocation() {
       </div>
       {/* Nearby Alerts List */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
-        <h3 className="text-xl font-bold text-white mb-4">Nearby Alerts</h3>
+        <h3 className="text-xl font-bold text-white mb-4">Your Assigned Alerts</h3>
         <div className="space-y-3">
+          {nearbyAlerts.length === 0 && <p className="text-slate-400">No alerts assigned to you right now.</p>}
           {nearbyAlerts.map(alert => <div key={alert.id} className="bg-slate-800 border border-slate-700 rounded-lg p-4">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-3">

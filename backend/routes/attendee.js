@@ -1,20 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const Issue = require('../models/Issue');
-const User = require('../models/User');
+const { requireRole } = require('../middleware/auth');
 
 // Route for attendees to report issues
-router.post('/issues/report', async (req, res) => {
-  const { reportedBy, description, location } = req.body;
+router.post('/issues/report', requireRole('attendee'), async (req, res) => {
+  const { description, location } = req.body;
 
   try {
-    const reporter = await User.findById(reportedBy);
-    if (!reporter || reporter.role !== 'attendee') {
-      return res.status(403).json({ msg: 'Forbidden: Only attendees can report issues.' });
-    }
-
     const newIssue = new Issue({
-      reportedBy,
+      reportedBy: req.user.id,
       description,
       location,
     });
@@ -22,7 +17,7 @@ router.post('/issues/report', async (req, res) => {
     await newIssue.save();
 
     // Emit a Socket.IO event to all connected admin clients
-    req.app.get('io').emit('newIssueAlert', { issue: newIssue, reporterName: reporter.name });
+    req.app.get('io').emit('newIssueAlert', { issue: newIssue, reporterName: req.user.name });
 
     res.status(201).json({ msg: 'Issue reported successfully', issue: newIssue });
   } catch (err) {
@@ -32,18 +27,11 @@ router.post('/issues/report', async (req, res) => {
 });
 
 // Route for attendees to get their alerts
-router.get('/attendee/alerts', async (req, res) => {
+router.get('/attendee/alerts', requireRole('attendee'), async (req, res) => {
   try {
-    const { attendeeId } = req.query;
-
-    const attendeeUser = await User.findById(attendeeId);
-    if (!attendeeUser || attendeeUser.role !== 'attendee' || !attendeeUser.isApproved) {
-      return res.status(403).json({ msg: 'Forbidden: Not an approved attendee.' });
-    }
-
     const alerts = await Issue.find({
       $or: [
-        { reportedBy: attendeeId },
+        { reportedBy: req.user.id },
         { isAdminCreated: true, audience: { $in: ['attendees', 'both'] } },
       ],
       status: { $ne: 'resolved' },
@@ -59,4 +47,3 @@ router.get('/attendee/alerts', async (req, res) => {
 });
 
 module.exports = router;
-

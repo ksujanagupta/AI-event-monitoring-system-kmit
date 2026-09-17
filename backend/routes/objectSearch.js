@@ -4,10 +4,13 @@ const multer = require("multer");
 const FormData = require("form-data");
 const fs = require("fs");
 
+const { requireRole } = require("../middleware/auth");
+
 const router = express.Router();
+const staff = requireRole("admin", "volunteer");
 const upload = multer({ dest: "uploads/" });
 
-router.post("/search-object", upload.fields([
+router.post("/search-object", staff, upload.fields([
     { name: "query", maxCount: 1 },
     { name: "video", maxCount: 1 }
 ]), async (req, res) => {
@@ -100,19 +103,18 @@ router.post("/search-object", upload.fields([
         if (error.response) {
             // FastAPI returned an error
             return res.status(error.response.status || 500).json({
-                error: error.response.data || error.message
+                error: error.response.data?.detail || error.message
             });
         }
 
         res.status(500).json({
-            error: error.message,
-            details: error.stack
+            error: error.message
         });
     }
 });
 
 // New route: Search object in multiple videos from public folder
-router.post("/search-object-multiple", upload.single("query"), async (req, res) => {
+router.post("/search-object-multiple", staff, upload.single("query"), async (req, res) => {
     console.log("=== Multiple Video Object Search Request Received ===");
     console.log("Request body:", req.body);
     console.log("Request file:", req.file);
@@ -196,13 +198,12 @@ router.post("/search-object-multiple", upload.single("query"), async (req, res) 
         if (error.response) {
             // FastAPI returned an error
             return res.status(error.response.status || 500).json({
-                error: error.response.data || error.message
+                error: error.response.data?.detail || error.message
             });
         }
 
         res.status(500).json({
-            error: error.message,
-            details: error.stack
+            error: error.message
         });
     }
 });

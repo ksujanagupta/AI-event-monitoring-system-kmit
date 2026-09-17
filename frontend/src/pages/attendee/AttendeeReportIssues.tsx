@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { apiFetch } from '../../api';
 import { AlertTriangleIcon, CheckCircleIcon, MapPinIcon, CameraIcon, SendIcon } from 'lucide-react';
 
 export function AttendeeReportIssues() {
@@ -91,13 +92,12 @@ export function AttendeeReportIssues() {
     }
 
     try {
-      const response = await fetch('http://localhost:5000/api/issues/report', {
+      const response = await apiFetch('/api/issues/report', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          reportedBy: userId,
           description: `Issue Type: ${issueTypes.find(type => type.id === issueType)?.label || issueType}. Details: ${description}`,
           location: {
             latitude: location.latitude,

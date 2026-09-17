@@ -1,10 +1,12 @@
 import React, { useState, useEffect, Fragment } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapContainer, TileLayer, Marker, Popup, Circle, CircleMarker } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Circle, CircleMarker, useMapEvents } from 'react-leaflet';
 import { BellIcon, CheckIcon, XIcon, UserIcon, ClockIcon, MapPinIcon, EyeIcon, PlusIcon, SendIcon, ArrowLeftIcon } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet'; // Import Leaflet library
-import { io, Socket } from 'socket.io-client';
+import { Socket } from 'socket.io-client';
+import { apiFetch, connectSocket } from '../../api';
+import { VENUE_CENTER } from '../../config';
 
 // Fix for default marker icon not appearing (common issue with react-leaflet)
 // This ensures Leaflet can find its default marker images
@@ -50,14 +52,13 @@ export function AdminAlerts() {
     title: '',
     message: '',
     severity: 'medium',
-    location: '',
+    location: null as { latitude: number; longitude: number } | null,
     audience: 'both' as 'volunteers' | 'attendees' | 'both'
   });
-  const adminName = "sujana"; // Replace with actual admin name from context
 
   // Socket.IO connection
   useEffect(() => {
-    const socket: Socket = io('http://localhost:5000'); // Connect to your backend Socket.IO server
+    const socket: Socket = connectSocket();
 
     socket.on('connect', () => {
       console.log('Connected to Socket.IO server');
@@ -100,7 +101,7 @@ export function AdminAlerts() {
   useEffect(() => {
     const fetchIssues = async () => {
       try {
-        const response = await fetch(`http://localhost:5000/api/admin/issues?adminName=${adminName}`);
+        const response = await apiFetch(`/api/admin/issues`);
         const data = await response.json();
         if (response.ok) {
           console.log('Fetched issues:', data); // Add this log
@@ -114,12 +115,12 @@ export function AdminAlerts() {
       }
     };
     fetchIssues();
-  }, [adminName]);
+  }, []);
 
   // Function to fetch volunteer locations
   const fetchVolunteerLocations = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/admin/volunteer-locations?adminName=${adminName}`);
+      const response = await apiFetch(`/api/admin/volunteer-locations`);
       if (response.ok) {
         const data: VolunteerData[] = await response.json();
         console.log('Fetched volunteer locations:', data); // Add this log
@@ -146,8 +147,7 @@ export function AdminAlerts() {
   // Fetch volunteers on component mount and on issue updates
   useEffect(() => {
     fetchVolunteerLocations();
-    // The dependency array should include adminName if it can change
-  }, [adminName]);
+  }, []);
 
   console.log('Current alerts state:', alerts); // Add this log
   console.log('Current adminVolunteers state:', adminVolunteers); // Add this log
@@ -176,12 +176,12 @@ export function AdminAlerts() {
     const volunteerIds = selectedVolunteers; 
 
     try {
-      const response = await fetch(`http://localhost:5000/api/admin/issues/${alertToAssign}/assign`, {
+      const response = await apiFetch(`/api/admin/issues/${alertToAssign}/assign`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ volunteerIds, adminName }),
+        body: JSON.stringify({ volunteerIds }),
       });
       const data = await response.json();
 
@@ -206,7 +206,7 @@ export function AdminAlerts() {
     }
     try {
       // For rejection, we'll delete the issue for now.
-      const response = await fetch(`http://localhost:5000/api/admin/issues/${alertId}?adminName=${adminName}`, {
+      const response = await apiFetch(`/api/admin/issues/${alertId}`, {
         method: 'DELETE',
       });
       const data = await response.json();
@@ -227,7 +227,7 @@ export function AdminAlerts() {
       return;
     }
     try {
-      const response = await fetch(`http://localhost:5000/api/admin/issues/${alertId}/resolve?adminName=${adminName}`, {
+      const response = await apiFetch(`/api/admin/issues/${alertId}/resolve`, {
         method: 'PUT',
       });
       const data = await response.json();
@@ -255,12 +255,12 @@ export function AdminAlerts() {
     }
 
     try {
-      const response = await fetch(`http://localhost:5000/api/admin/alerts`, {
+      const response = await apiFetch(`/api/admin/alerts`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ ...newAlertForm, adminName }),
+        body: JSON.stringify(newAlertForm),
       });
       const data = await response.json();
 
@@ -272,7 +272,7 @@ export function AdminAlerts() {
           title: '',
           message: '',
           severity: 'medium',
-          location: '',
+          location: null,
           audience: 'both'
         });
       } else {
@@ -318,7 +318,7 @@ export function AdminAlerts() {
       <div className="flex-1 flex overflow-hidden">
         {/* Map Section */}
         <div className="flex-1 relative">
-          <MapContainer center={[17.3850, 78.4867]} zoom={13} style={{
+          <MapContainer center={VENUE_CENTER} zoom={15} style={{
           height: '100%',
           width: '100%'
         }} className="z-0">
@@ -498,12 +498,11 @@ export function AdminAlerts() {
                         // This button is for broadcasting to attendees
                         // Assuming a backend endpoint exists for this
                         if (window.confirm('Are you sure you want to broadcast this alert to all attendees?')) {
-                          fetch(`http://localhost:5000/api/admin/issues/${alert._id}/broadcast-to-attendees`, {
+                          apiFetch(`/api/admin/issues/${alert._id}/broadcast-to-attendees`, {
                             method: 'POST',
                             headers: {
                               'Content-Type': 'application/json',
                             },
-                            body: JSON.stringify({ adminName }), // Send adminName in the body
                           })
                           .then(async response => { // Mark this as async to await json()
                             console.log('Broadcast response status:', response.status); // Log response status
@@ -559,12 +558,11 @@ export function AdminAlerts() {
                         // This button is for broadcasting to attendees
                         // Assuming a backend endpoint exists for this
                         if (window.confirm('Are you sure you want to broadcast this alert to all attendees?')) {
-                          fetch(`http://localhost:5000/api/admin/issues/${alert._id}/broadcast-to-attendees`, {
+                          apiFetch(`/api/admin/issues/${alert._id}/broadcast-to-attendees`, {
                             method: 'POST',
                             headers: {
                               'Content-Type': 'application/json',
                             },
-                            body: JSON.stringify({ adminName }), // Send adminName in the body
                           })
                           .then(async response => { // Mark this as async to await json()
                             console.log('Broadcast response status:', response.status); // Log response status
@@ -610,7 +608,7 @@ export function AdminAlerts() {
               title: '',
               message: '',
               severity: 'medium',
-              location: '',
+              location: null,
                     audience: 'both',
             });
                 }}
@@ -626,7 +624,7 @@ export function AdminAlerts() {
               title: '',
               message: '',
               severity: 'medium',
-              location: '',
+              location: null,
                     audience: 'both',
             });
                 }}
@@ -686,17 +684,15 @@ export function AdminAlerts() {
               </div>
               <div>
                 <label className="block text-slate-300 mb-1.5 text-sm font-medium">
-                  Location (Optional)
+                  Location (click the map; defaults to venue center)
                 </label>
-                <input
-                  type="text"
-                  value={newAlertForm.location}
-                  onChange={(e) =>
-                    setNewAlertForm({ ...newAlertForm, location: e.target.value })
-                  }
-                  placeholder="e.g., Main Stage"
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500"
-                />
+                <MapContainer center={VENUE_CENTER} zoom={16} style={{ height: '180px', width: '100%' }} className="rounded-lg z-0">
+                  <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                  <ClickToPick onPick={(latitude, longitude) => setNewAlertForm({ ...newAlertForm, location: { latitude, longitude } })} />
+                  {newAlertForm.location && (
+                    <CircleMarker center={[newAlertForm.location.latitude, newAlertForm.location.longitude]} radius={8} pathOptions={{ color: 'red' }} />
+                  )}
+                </MapContainer>
               </div>
               <div>
                 <label className="block text-slate-300 mb-1.5 text-sm font-medium">
@@ -830,4 +826,10 @@ export function AdminAlerts() {
       {/* )} */}
                 </div>
   );
+}
+
+// Sets the create-alert location from a click on the small map
+function ClickToPick({ onPick }: { onPick: (latitude: number, longitude: number) => void }) {
+  useMapEvents({ click: (e) => onPick(e.latlng.lat, e.latlng.lng) });
+  return null;
 }

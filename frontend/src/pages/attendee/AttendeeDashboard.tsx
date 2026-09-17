@@ -6,6 +6,8 @@ import { AttendeeEvacuation } from './AttendeeEvacuation';
 import { AttendeeAlerts } from './AttendeeAlerts';
 export function AttendeeDashboard() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  // Navigation only; the backend enforces roles on every request
+  if (localStorage.getItem('userRole') !== 'attendee' || !localStorage.getItem('token')) return <Navigate to="/login" replace />;
   return <div className="min-h-screen w-full bg-slate-950 flex">
       <Sidebar role="attendee" onCollapsedChange={setSidebarCollapsed} />
       <div className={`flex-1 transition-all duration-300 ${sidebarCollapsed ? 'ml-20' : 'ml-64'}`}>

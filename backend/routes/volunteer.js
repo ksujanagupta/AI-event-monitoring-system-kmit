@@ -2,18 +2,14 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 const Issue = require('../models/Issue');
+const { requireRole } = require('../middleware/auth');
+
+const volunteerOnly = requireRole('volunteer');
 
 // Route for volunteers to get their assigned issues
-router.get('/volunteer/assigned-issues', async (req, res) => {
+router.get('/volunteer/assigned-issues', volunteerOnly, async (req, res) => {
   try {
-    const { volunteerId } = req.query;
-
-    const volunteer = await User.findById(volunteerId);
-    if (!volunteer || volunteer.role !== 'volunteer' || !volunteer.isApproved) {
-      return res.status(403).json({ msg: 'Forbidden: Not an approved volunteer.' });
-    }
-
-    const assignedIssues = await Issue.find({ assignedTo: { $in: [volunteerId] }, status: { $ne: 'resolved' } })
+    const assignedIssues = await Issue.find({ assignedTo: { $in: [req.user.id] }, status: { $ne: 'resolved' } })
       .populate('reportedBy', 'name').populate('assignedTo', 'name');
 
     res.json(assignedIssues);
@@ -23,16 +19,32 @@ router.get('/volunteer/assigned-issues', async (req, res) => {
   }
 });
 
+// Route for volunteers to share their live location (sent from the Geo-Location page)
+router.put('/volunteer/location', volunteerOnly, async (req, res) => {
+  const latitude = Number(req.body.latitude);
+  const longitude = Number(req.body.longitude);
+  const accuracy = Number(req.body.accuracy);
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+    return res.status(400).json({ msg: 'latitude and longitude are required.' });
+  }
+
+  try {
+    await User.findByIdAndUpdate(req.user.id, {
+      lastKnownLocation: { latitude, longitude, accuracy: Number.isFinite(accuracy) ? accuracy : undefined },
+    });
+    res.json({ msg: 'Location updated' });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server error');
+  }
+});
+
 // Route for volunteers to accept an assigned issue
-router.put('/volunteer/issues/:issueId/accept', async (req, res) => {
+router.put('/volunteer/issues/:issueId/accept', volunteerOnly, async (req, res) => {
   try {
     const { issueId } = req.params;
-    const { volunteerId, needBackup } = req.body;
-
-    const volunteer = await User.findById(volunteerId);
-    if (!volunteer || volunteer.role !== 'volunteer' || !volunteer.isApproved) {
-      return res.status(403).json({ msg: 'Forbidden: Not an approved volunteer.' });
-    }
+    const { needBackup } = req.body;
+    const volunteerId = req.user.id;
 
     const issue = await Issue.findByIdAndUpdate(
       issueId,
@@ -56,15 +68,9 @@ router.put('/volunteer/issues/:issueId/accept', async (req, res) => {
 });
 
 // Route for volunteers to mark an issue as resolved
-router.put('/volunteer/issues/:issueId/resolve', async (req, res) => {
+router.put('/volunteer/issues/:issueId/resolve', volunteerOnly, async (req, res) => {
   try {
     const { issueId } = req.params;
-    const { volunteerId } = req.body;
-
-    const volunteer = await User.findById(volunteerId);
-    if (!volunteer || volunteer.role !== 'volunteer' || !volunteer.isApproved) {
-      return res.status(403).json({ msg: 'Forbidden: Not an approved volunteer.' });
-    }
 
     const issue = await Issue.findByIdAndUpdate(
       issueId,
@@ -102,15 +108,9 @@ router.put('/volunteer/issues/:issueId/resolve', async (req, res) => {
 });
 
 // Route for volunteers to ask for backup
-router.put('/volunteer/issues/:issueId/ask-for-backup', async (req, res) => {
+router.put('/volunteer/issues/:issueId/ask-for-backup', volunteerOnly, async (req, res) => {
   try {
     const { issueId } = req.params;
-    const { volunteerId } = req.body;
-
-    const volunteer = await User.findById(volunteerId);
-    if (!volunteer || volunteer.role !== 'volunteer' || !volunteer.isApproved) {
-      return res.status(403).json({ msg: 'Forbidden: Not an approved volunteer.' });
-    }
 
     const issue = await Issue.findByIdAndUpdate(
       issueId,
@@ -132,15 +132,10 @@ router.put('/volunteer/issues/:issueId/ask-for-backup', async (req, res) => {
 });
 
 // Route for volunteers to take over a backup request (accept an issue)
-router.put('/volunteer/issues/:issueId/take-backup', async (req, res) => {
+router.put('/volunteer/issues/:issueId/take-backup', volunteerOnly, async (req, res) => {
   try {
     const { issueId } = req.params;
-    const { newVolunteerId } = req.body;
-
-    const newVolunteer = await User.findById(newVolunteerId);
-    if (!newVolunteer || newVolunteer.role !== 'volunteer' || !newVolunteer.isApproved) {
-      return res.status(403).json({ msg: 'Forbidden: Not an approved volunteer.' });
-    }
+    const newVolunteerId = req.user.id;
 
     const originalIssue = await Issue.findById(issueId);
     if (!originalIssue) {
