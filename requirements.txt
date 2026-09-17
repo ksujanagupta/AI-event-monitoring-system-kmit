@@ -1,0 +1,39 @@
+# Python packages for both AI services:
+#   backend/server.py            - FastAPI CCTV search  (port 8000)
+#   server/stream_server.py      - Flask live detection  (port 5001)
+#
+# Install with:  pip install -r requirements.txt
+#
+# Python 3.10, 3.11 or 3.12 only. Python 3.13 does NOT work: facenet-pytorch
+# pins Pillow < 10.3, which has no 3.13 wheel and fails to build from source.
+#
+# Download size is about 2-3 GB, mostly PyTorch. CPU builds are installed by
+# default and are enough to run the project. For an NVIDIA GPU, install the
+# CUDA build of torch first, from https://pytorch.org/get-started/locally/
+# then run this file.
+
+# --- deep learning core (versions fixed by facenet-pytorch 2.6.0) ---
+torch==2.2.2
+torchvision==0.17.2
+numpy==1.26.4
+Pillow==10.2.0
+
+# --- AI models ---
+facenet-pytorch==2.6.0          # MTCNN + FaceNet, missing-person search
+ultralytics==8.2.103            # YOLOv8, fire detection
+opencv-python==4.9.0.80         # video capture, ORB object search
+scikit-learn==1.5.2             # cosine similarity for face matching
+clip @ git+https://github.com/openai/CLIP.git@d05afc436d78f1c48dc0dbf8e5980a9d471f35f6   # CLIP ViT-B/32, violence detection (needs git installed)
+ftfy==6.3.1                     # required by CLIP
+regex==2024.11.6                # required by CLIP
+
+# --- web services ---
+fastapi==0.115.6
+uvicorn==0.34.0
+python-multipart==0.0.20        # file uploads for FastAPI
+flask==3.1.0
+flask-cors==5.0.0
+
+# --- support ---
+PyYAML==6.0.2                   # reads server/violence_model/violence_settings.yaml
+matplotlib==3.9.2               # imported by violence_model.py

@@ -45,7 +45,11 @@ points during an evacuation.
 
 ## Getting started
 
-You need **Node.js 18+**, **Python 3.11+**, a **MongoDB Atlas** connection string and a **Google Gemini API key**.
+Short version below. For step-by-step setup on a fresh machine — MongoDB, Python environment,
+camera, troubleshooting — see **[HOW_TO_RUN.md](HOW_TO_RUN.md)**.
+
+You need **Node.js 18+**, **Python 3.10–3.12**, a **MongoDB** database (local or Atlas) and,
+for the chatbot, a **Google Gemini API key**.
 
 ### 1. Settings
 
@@ -66,10 +70,8 @@ FRONTEND_ORIGIN=http://localhost:5173
 cd backend && npm install            # Express API
 cd ../frontend && npm install        # web app
 
-pip install ultralytics opencv-python facenet-pytorch scikit-learn \
-            fastapi "uvicorn[standard]" python-multipart flask flask-cors \
-            pyyaml matplotlib pillow ftfy regex \
-            git+https://github.com/openai/CLIP.git
+python3.12 -m venv .venv && source .venv/bin/activate   # Windows: .\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt                        # ~2-3 GB, mostly PyTorch
 ```
 
 The CLIP and FaceNet weights download themselves the first time you run the AI services, so keep internet on.
