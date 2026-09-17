@@ -1,0 +1,10 @@
+node_modules/
+__pycache__/
+*.pyc
+.vite/
+.env
+.DS_Store
+backend/uploads/
+backend/output/
+backend/input/
+backend/ai-logs/*.jsonl
